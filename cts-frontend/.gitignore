@@ -1,0 +1,16 @@
+# Dependencies and generated files
+node_modules/
+dist/
+.vite/
+
+# Local environment files (set VITE_* in Vercel instead)
+.env
+.env.local
+.env.development
+.env.development.local
+.env.production
+.env.production.local
+
+# Local tooling
+.DS_Store
+*.log
