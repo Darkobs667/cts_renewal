@@ -72,12 +72,12 @@ class VoteController extends Controller
             }
         }
 
-        // Store a keyed digest rather than an email address in the ballot table.
-        $voterIdentifier = hash_hmac('sha256', (string) $user->id, config('app.key'));
+        // Hash HMAC de l'ID utilisateur — jamais l'email en clair.
+        $voterIdentifier = $user->voteHash();
 
-        // Vérification de doublon
+        // Vérification de doublon (uniquement sur le hash, pas sur l'email).
         $existing = Vote::where('position_id', $request->position_id)
-                        ->whereIn('hash_session', [$voterIdentifier, $user->email])
+                        ->where('hash_session', $voterIdentifier)
                         ->first();
 
         if ($existing) {
@@ -160,14 +160,14 @@ class VoteController extends Controller
             }
         }
 
-        $voterIdentifier = hash_hmac('sha256', (string) $user->id, config('app.key'));
+        $voterIdentifier = $user->voteHash();
 
         try {
-            $votes = \Illuminate\Support\Facades\DB::transaction(function () use ($choices, $voterIdentifier, $user) {
+            $votes = \Illuminate\Support\Facades\DB::transaction(function () use ($choices, $voterIdentifier) {
                 $positionIds = collect($choices)->pluck('position_id');
                 $alreadyVoted = Vote::query()
                     ->whereIn('position_id', $positionIds)
-                    ->whereIn('hash_session', [$voterIdentifier, $user->email])
+                    ->where('hash_session', $voterIdentifier)
                     ->lockForUpdate()
                     ->exists();
 
@@ -207,24 +207,15 @@ class VoteController extends Controller
      */
     public function results(Request $request): JsonResponse
     {
-        $positionId = $request->get('position_id', 'all');
-        $cacheKey = "vote_results_{$positionId}";
-        
+        $positionId = $request->integer('position_id', 0) ?: null;
+        $cacheKey   = 'vote_results_' . ($positionId ?? 'all');
+
         $results = $this->rememberCache($cacheKey, function () use ($positionId) {
-            if ($positionId !== 'all') {
-                $data = $this->voteService->getResults($positionId);
-            } else {
-                $data = $this->voteService->getResults();
-            }
-            
-            // Convertir en array pour éviter les problèmes de sérialisation
+            $data = $this->voteService->getResults($positionId);
             return json_decode(json_encode($data), true);
         }, $this->resultsCacheTtl);
 
-        return response()->json([
-            'success' => true,
-            'data' => $results
-        ]);
+        return response()->json(['success' => true, 'data' => $results]);
     }
 
     /**
@@ -238,8 +229,8 @@ class VoteController extends Controller
             return response()->json(['message' => 'Non authentifié'], 401);
         }
 
-        $voterIdentifier = hash_hmac('sha256', (string) $user->id, config('app.key'));
-        $votes = Vote::whereIn('hash_session', [$voterIdentifier, $user->email])
+        $voterIdentifier = $user->voteHash();
+        $votes = Vote::where('hash_session', $voterIdentifier)
                     ->with('position')
                     ->orderBy('created_at', 'desc')
                     ->get()
@@ -264,7 +255,7 @@ class VoteController extends Controller
         }
 
         $vote = Vote::where('id', $voteId)
-                    ->whereIn('hash_session', [hash_hmac('sha256', (string) $user->id, config('app.key')), $user->email])
+                    ->where('hash_session', $user->voteHash())
                     ->with('position', 'candidate.user')
                     ->first();
 
@@ -378,7 +369,7 @@ class VoteController extends Controller
             return response()->json(['error' => 'Non authentifié'], 401);
         }
         
-        $hasVoted = Vote::whereIn('hash_session', [hash_hmac('sha256', (string) $user->id, config('app.key')), $user->email])
+        $hasVoted = Vote::where('hash_session', $user->voteHash())
             ->where('position_id', $positionId)
             ->exists();
         

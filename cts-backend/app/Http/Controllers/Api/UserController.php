@@ -3,44 +3,59 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Hash;
 use App\Models\Candidate;
+use App\Models\User;
 use App\Models\Vote;
-
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(): JsonResponse
     {
         $users = User::select('id', 'first_name', 'last_name', 'email', 'role', 'status')
-                     ->get()
-                     ->map(function ($user) {
-                         return [
-                             'id'     => $user->id,
-                             'nom'    => trim($user->first_name . ' ' . $user->last_name),
-                             'email'  => $user->email,
-                             'role'   => $user->role,
-                             'status' => $user->status ?? 'Validé', // colonne inexistante → null → 'Validé'
-                         ];
-                     });
+            ->get()
+            ->map(fn (User $user) => [
+                'id'     => $user->id,
+                'nom'    => trim($user->first_name . ' ' . $user->last_name),
+                'email'  => $user->email,
+                'role'   => $user->role,
+                'status' => $user->status ?? 'Validé',
+            ]);
+
+        return response()->json(['success' => true, 'data' => $users]);
+    }
+
+    /**
+     * Modifier le statut d'un utilisateur (admin seulement).
+     * Valeurs acceptées : 'Validé' | 'Suspendu'
+     */
+    public function updateStatus(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'status' => 'required|string|in:Validé,Suspendu',
+        ]);
+
+        $user = User::findOrFail($id);
+        $user->status = $request->status;
+        $user->save();
 
         return response()->json([
             'success' => true,
-            'data'    => $users,
+            'message' => 'Statut mis à jour.',
+            'data'    => ['id' => $user->id, 'status' => $user->status],
         ]);
     }
 
-     /**
-     * Réinitialiser le mot de passe d'un utilisateur (admin seulement)
+    /**
+     * Réinitialiser le mot de passe d'un utilisateur (admin seulement).
      */
-    public function resetPassword(Request $request, $id): JsonResponse
+    public function resetPassword(Request $request, int $id): JsonResponse
     {
         $user = User::findOrFail($id);
-        $newPassword = Str::random(12); // 12 caractères aléatoires
+        $newPassword = Str::random(12);
         $user->password = Hash::make($newPassword);
         $user->save();
 
@@ -50,19 +65,24 @@ class UserController extends Controller
         ]);
     }
 
-   public function destroy($id)
-{
-    $user = User::findOrFail($id);
+    /**
+     * Supprimer un utilisateur et toutes ses données associées.
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        $user = User::findOrFail($id);
 
-    // Supprimer les candidatures de l'utilisateur
-    Candidate::where('user_id', $user->id)->delete();
+        // Calcule le même hash que celui utilisé lors du vote.
+        $voteHash = $user->voteHash();
 
-    // Supprimer les votes liés (via son email utilisé comme hash_session)
-    Vote::where('hash_session', $user->email)->delete();
+        // Supprimer les votes liés via le hash HMAC (et non l'email).
+        Vote::where('hash_session', $voteHash)->delete();
 
-    // Supprimer l'utilisateur
-    $user->delete();
+        // Supprimer les candidatures de l'utilisateur.
+        Candidate::where('user_id', $user->id)->delete();
 
-    return response()->json(['message' => 'Utilisateur supprimé avec succès']);
-}
+        $user->delete();
+
+        return response()->json(['message' => 'Utilisateur supprimé avec succès.']);
+    }
 }

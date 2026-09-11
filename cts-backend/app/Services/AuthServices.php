@@ -3,186 +3,122 @@
 namespace App\Services;
 
 use App\Models\User;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
-use Illuminate\Support\Facades\DB;
 
 class AuthServices
 {
-   /**
-     * Register a new user
+    /**
+     * Inscrire un nouvel utilisateur.
      *
-     * @param array $data
-     * @return array
-     * @throws \Exception
+     * Correction #15 : browserId peut être une chaîne vide si FingerprintJS échoue
+     * côté client. On n'applique la contrainte d'unicité que si un browserId
+     * non-vide est fourni, pour ne pas bloquer l'inscription.
      */
     public function register(array $data): array
     {
-        // 
-        if (User::where('browserId', $data['browserId'])->exists()) {
-            return ['errors' => 'Vous avez deja creer un compte sur cette appareil, vous ne pouvez pas en creer un autre'];
+        $browserId = trim($data['browserId'] ?? '');
+
+        // Unicité du browserId seulement s'il est renseigné.
+        if ($browserId !== '' && User::where('browserId', $browserId)->exists()) {
+            return ['errors' => 'Un compte existe déjà sur cet appareil.'];
         }
 
-        // Check if email already exists
         if (User::where('email', $data['email'])->exists()) {
-            return ['errors' => 'Email already exists'];
+            return ['errors' => 'Cette adresse e-mail est déjà utilisée.'];
         }
-        // check password
-        if (strlen($data['password']) < 8) {
-            return ['errors' => 'Password must be at least 8 characters'];
-        }
+
         DB::beginTransaction();
-  
         try {
             $user = User::create([
                 'first_name' => $data['first_name'],
-                'last_name' => $data['last_name'],
-                'code' => $data['code'],
-                'email' => strtolower($data['email']),
-                'browserId'=>$data['browserId'],
-                'password' => Hash::make($data['password']),
+                'last_name'  => $data['last_name'],
+                'code'       => $data['code'] ?? null,
+                'email'      => strtolower(trim($data['email'])),
+                'browserId'  => $browserId !== '' ? $browserId : null,
+                'password'   => Hash::make($data['password']),
             ]);
 
             DB::commit();
 
-            return [
-                'user' => $user,
-            ];
+            return ['user' => $user];
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;
         }
     }
 
-
     /**
-     * Authenticate user and return tokens
-     *
-     * @param array $credentials
-     * @return array|null
-     * @throws \Exception
+     * Authentifier un utilisateur et retourner les tokens.
      */
-    public function login(array $credentials): ?array
+    public function login(array $credentials): array
     {
-        $user = null;
-
-        if (isset($credentials['email'])) {
-            $user = User::where('email', $credentials['email'])->first();
-        } else {
-            throw new \Exception("Email est requis pour la connexion", 422);
+        if (empty($credentials['email'])) {
+            throw new \Exception('L\'adresse e-mail est requise.', 422);
         }
 
-        if (!$user) {
-            throw new \Exception('Identifiants invalides', 401);
-        }
+        $user = User::where('email', strtolower(trim($credentials['email'])))->first();
 
-        if (!Hash::check($credentials['password'], $user->password)) {
-            throw new \Exception('Identifiants invalides', 401);
+        if (!$user || !Hash::check($credentials['password'], $user->password)) {
+            throw new \Exception('Identifiants invalides.', 401);
         }
 
         $tokens = $this->generateTokens($user);
 
         return [
-            'user' => $user->fresh(),
-            'access_token' => $tokens['access_token'],
+            'user'          => $user->fresh(),
+            'access_token'  => $tokens['access_token'],
             'refresh_token' => $tokens['refresh_token'],
         ];
     }
 
     /**
-     * Logout user and invalidate token
-     *
-     * @return bool
+     * Invalider le token JWT courant.
      */
     public function logout(): bool
     {
         try {
             JWTAuth::invalidate(JWTAuth::getToken());
             return true;
-        } catch (JWTException $e) {
+        } catch (JWTException) {
             return false;
         }
     }
 
     /**
-     * Refresh access token
-     *
-     * @return array
-     * @throws JWTException
+     * Rafraîchir l'access token.
      */
     public function refresh(): array
     {
         try {
-            $user = auth('api')->user();
+            $user     = auth('api')->user();
             $newToken = JWTAuth::refresh(JWTAuth::getToken());
-            $refreshToken = $this->generateRefreshToken($user);
 
             return [
-                'access_token' => $newToken,
-                'refresh_token' => $refreshToken,
+                'access_token'  => $newToken,
+                'refresh_token' => $this->generateRefreshToken($user),
             ];
         } catch (JWTException $e) {
-            throw new JWTException('Could not refresh token');
+            throw new JWTException('Impossible de rafraîchir le token.');
         }
     }
 
     /**
-     * Get authenticated user
-     *
-     * @return User|null
+     * Utilisateur actuellement authentifié.
      */
     public function me(): ?User
     {
         try {
             return auth('api')->user();
-        } catch (JWTException $e) {
+        } catch (JWTException) {
             return null;
         }
     }
 
     /**
-     * Generate access and refresh tokens for user
-     *
-     * @param User $user
-     * @return array
-     */
-    private function generateTokens(User $user): array
-    {
-        $accessToken = JWTAuth::fromUser($user);
-        $refreshToken = $this->generateRefreshToken($user);
-
-        return [
-            'access_token' => $accessToken,
-            'refresh_token' => $refreshToken,
-        ];
-    }
-
-    /**
-     * Generate refresh token
-     *
-     * @param User $user
-     * @return string
-     */
-    private function generateRefreshToken(User $user): string
-    {
-        // For simplicity, we'll use JWT with longer expiration for refresh token
-        // In production, consider using a separate table for refresh tokens
-        $customClaims = [
-            'type' => 'refresh',
-            'user_id' => $user->id,
-            'exp' => now()->addDays(30)->timestamp, // 1 month
-        ];
-
-        return JWTAuth::customClaims($customClaims)->fromUser($user);
-    }
-
-    /**
-     * Validate refresh token and return user
-     *
-     * @param string $refreshToken
-     * @return User|null
+     * Valider un refresh token et retourner l'utilisateur associé.
      */
     public function validateRefreshToken(string $refreshToken): ?User
     {
@@ -193,10 +129,28 @@ class AuthServices
                 return null;
             }
 
-            $userId = $payload->get('user_id');
-            return User::find($userId);
-        } catch (JWTException $e) {
+            return User::find($payload->get('user_id'));
+        } catch (JWTException) {
             return null;
         }
+    }
+
+    // ─── Private ──────────────────────────────────────────────────────────────
+
+    private function generateTokens(User $user): array
+    {
+        return [
+            'access_token'  => JWTAuth::fromUser($user),
+            'refresh_token' => $this->generateRefreshToken($user),
+        ];
+    }
+
+    private function generateRefreshToken(User $user): string
+    {
+        return JWTAuth::customClaims([
+            'type'    => 'refresh',
+            'user_id' => $user->id,
+            'exp'     => now()->addDays(30)->timestamp,
+        ])->fromUser($user);
     }
 }

@@ -1,250 +1,164 @@
-import { useState, useEffect, useMemo } from "react";
-import VoterLayout from "../Components/VoterLayout";
-import { useLocation, useNavigate } from "react-router";
-import { User, ShieldAlert, Check, Loader2, Vote, ShieldCheck, Send } from "lucide-react";
-import api from "../services/api";
-import { candidatePhotoUrl } from '../utils/media';
-import toast from 'react-hot-toast';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
+import { Check, Loader2, Send, ShieldAlert, User } from 'lucide-react';
+import VoterLayout from './VoterLayout';
 import Modal from './Modal';
 import Loading from './Loading';
+import api from '../services/api';
+import toast from 'react-hot-toast';
 
-const VoterChoice = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [selected, setSelected] = useState(null);
-  const [candidates, setCandidates] = useState([]);
-  const [loadingCandidates, setLoadingCandidates] = useState(true);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+export default function VoterChoice() {
+  const location  = useLocation();
+  const navigate  = useNavigate();
+  const election  = location.state?.election || { titre: 'Scrutin inconnu', id: null };
 
-  const election = location.state?.election || {
-    titre: "Scrutin inconnu",
-    id: null,
-  };
+  const [candidates,    setCandidates]    = useState([]);
+  const [loadingCand,   setLoadingCand]   = useState(true);
+  const [selected,      setSelected]      = useState(null);
+  const [confirmOpen,   setConfirmOpen]   = useState(false);
+  const [submitting,    setSubmitting]    = useState(false);
 
   useEffect(() => {
-    const fetchCandidates = async () => {
-      if (!election.id) { setLoadingCandidates(false); return; }
-      try {
-        setLoadingCandidates(true);
-        const response = await api.get('/candidates', { params: { position_id: election.id } });
-        const data = response.data.data || [];
-        const formatted = data.map((c) => ({
-          id: c.id,
-          nom: c.user
-            ? `${c.user.first_name ?? ''} ${c.user.last_name ?? ''}`.trim()
-            : `Utilisateur #${c.user_id}`,
-          profession: 'Candidat',
-          slogan: c.slogan || c.bio || 'Pas de slogan',
-          photo: candidatePhotoUrl(c.photo_url || c.photo_path),
-          preview: candidatePhotoUrl(c.photo_url || c.photo_path),
-        }));
-        setCandidates(formatted);
-      } catch (error) {
-        console.error("Erreur chargement candidats", error);
-      } finally {
-        setLoadingCandidates(false);
-      }
-    };
-    fetchCandidates();
+    if (!election.id) { setLoadingCand(false); return; }
+    api.get('/candidates', { params: { position_id: election.id } })
+      .then((res) => setCandidates(
+        (res.data.data || []).map((c) => ({
+          id:      c.id,
+          nom:     `${c.user?.first_name ?? ''} ${c.user?.last_name ?? ''}`.trim() || `#${c.user_id}`,
+          slogan:  c.slogan || c.bio || 'Pas de slogan',
+          initial: (c.user?.first_name?.[0] ?? 'C').toUpperCase(),
+        }))
+      ))
+      .finally(() => setLoadingCand(false));
   }, [election.id]);
 
-  const selectedCandidate = useMemo(() => {
-    if (selected === 'blanc') return { id: 'blanc', nom: 'Vote blanc' };
-    return candidates.find((candidate) => candidate.id === selected) || null;
+  const selectedCand = useMemo(() => {
+    if (selected === 'blanc') return { id: 'blanc', nom: 'Vote blanc', initial: '—' };
+    return candidates.find((c) => c.id === selected) || null;
   }, [candidates, selected]);
 
   const submitVote = async () => {
-    if (!election.id || !selectedCandidate || isSubmitting) return;
-
+    if (!election.id || !selectedCand || submitting) return;
+    setSubmitting(true);
     try {
-      setIsSubmitting(true);
       await api.post('/votes', {
-        position_id: election.id,
-        candidate_id: selectedCandidate.id === 'blanc' ? null : selectedCandidate.id,
+        position_id:  election.id,
+        candidate_id: selectedCand.id === 'blanc' ? null : selectedCand.id,
       });
-      toast.success('Votre vote a été enregistré.');
+      toast.success('Vote enregistré.');
       navigate('/voterHistory', { replace: true });
-    } catch (error) {
-      const message = error.response?.data?.message || 'Le vote n’a pas pu être enregistré.';
-      toast.error(message);
-    } finally {
-      setIsSubmitting(false);
-    }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Le vote n\'a pas pu être enregistré.');
+    } finally { setSubmitting(false); }
   };
 
   return (
     <VoterLayout activePage="dashboard">
-      <style>{`
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(14px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .fade-up { animation: fadeUp .42s ease both; }
-      `}</style>
+      <div className="mx-auto max-w-3xl space-y-5 pb-20">
 
-      <div className="max-w-3xl mx-auto pb-20">
-
-        {/* ── header ── */}
-        <div className="mb-8 fade-up">
-          <h1 className="text-xl md:text-2xl font-[900] text-slate-900 mb-4">
-            Vote en cours&nbsp;: <span className="text-emerald-600">{election.titre}</span>
+        {/* Header */}
+        <div className="animate-fade-up">
+          <h1 className="text-xl font-black text-slate-900">
+            Vote&nbsp;: <span className="text-emerald-600">{election.titre}</span>
           </h1>
-
-          {/* stepper */}
-          <div className="flex items-center gap-3">
-            {/* step 1 — active */}
+          {/* Stepper */}
+          <div className="mt-3 flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0">
-                <span className="text-[9px] font-black text-white">1</span>
-              </div>
-              <span className="text-[10px] font-black text-emerald-600">Sélection</span>
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg
+                bg-emerald-500 text-[9px] font-black text-white">1</span>
+              <span className="text-[10px] font-bold text-emerald-600">Sélection</span>
             </div>
-            {/* connector */}
-            <div className="flex-1 h-0.5 bg-slate-100 rounded-full max-w-[60px]">
-              <div className="h-full w-1/2 bg-emerald-400 rounded-full" />
-            </div>
-            {/* step 2 — pending */}
+            <div className="h-px flex-1 max-w-16 bg-slate-200" />
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
-                <span className="text-[9px] font-black text-slate-400">2</span>
-              </div>
-              <span className="text-[10px] font-black text-slate-400">Confirmation</span>
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg
+                bg-slate-100 text-[9px] font-bold text-slate-400">2</span>
+              <span className="text-[10px] font-bold text-slate-400">Confirmation</span>
             </div>
           </div>
         </div>
 
-        {/* ── loading ── */}
-        {loadingCandidates ? (
+        {loadingCand ? (
           <Loading text="Chargement des candidats…" className="py-24" />
-
         ) : candidates.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-slate-100 shadow-sm">
-            <div className="w-16 h-16 bg-slate-50 rounded-[24px] border-2 border-dashed border-slate-200 flex items-center justify-center mb-4">
-              <User size={26} className="text-slate-200" />
-            </div>
-            <p className="font-black text-slate-400 text-sm">Aucun candidat pour ce scrutin.</p>
+          <div className="content-card p-12 text-center">
+            <User size={24} className="mx-auto text-slate-300" />
+            <p className="mt-3 text-sm font-semibold text-slate-500">Aucun candidat pour ce scrutin.</p>
           </div>
-
         ) : (
           <>
-            {/* ── candidate grid ── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            {/* Grid */}
+            <div className="grid gap-3 sm:grid-cols-2 animate-fade-up delay-50">
               {candidates.map((c, i) => {
-                const isSelected = selected === c.id;
+                const isSel = selected === c.id;
                 return (
-                  <div
-                    key={c.id}
-                    onClick={() => setSelected(c.id)}
-                    className={`group relative bg-white rounded-3xl border-2 cursor-pointer
-                      transition-all duration-300 p-6 fade-up
-                      ${isSelected
-                        ? 'border-emerald-500 shadow-lg shadow-emerald-50 scale-[1.01]'
-                        : 'border-slate-100 hover:border-emerald-200 hover:shadow-md'
-                      }`}
-                    style={{ animationDelay: `${i * 70}ms` }}
+                  <button key={c.id} type="button" onClick={() => setSelected(c.id)}
+                    className={`rounded-2xl border-2 p-5 text-left transition-all ${
+                      isSel
+                        ? 'border-emerald-500 bg-emerald-50/60 shadow-sm'
+                        : 'border-slate-200 bg-white hover:border-emerald-200'
+                    }`}
+                    style={{ animationDelay: `${i * 60}ms` }}
                   >
-                    {/* selected accent stripe */}
-                    {isSelected && (
-                      <span className="absolute top-0 left-6 right-6 h-0.5 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-b-full" />
-                    )}
-
-                    <div className="flex items-start gap-4">
-                      {/* avatar */}
-                      <div className={`w-16 h-16 rounded-2xl overflow-hidden shrink-0 border-2 transition-all duration-300 ${
-                        isSelected ? 'border-emerald-300 shadow-md shadow-emerald-50' : 'border-slate-100'
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`flex h-12 w-12 shrink-0 items-center justify-center
+                          rounded-xl text-base font-black select-none ${
+                          isSel ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          {c.initial}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">{c.nom}</p>
+                        </div>
+                      </div>
+                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center
+                        rounded-full border-2 transition-all mt-0.5 ${
+                        isSel ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-300'
                       }`}>
-                        {c.photo || c.preview ? (
-                          <img src={c.photo || c.preview} className="w-full h-full object-cover" alt={c.nom} />
-                        ) : (
-                          <div className="w-full h-full bg-emerald-50 flex items-center justify-center">
-                            <User size={24} className="text-emerald-300" />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <div>
-                            <p className="text-[9px] font-black text-emerald-500 mt-0.5 tracking-wide uppercase">
-                              {c.profession}
-                            </p>
-                            <h3 className="font-[900] text-slate-900 text-sm leading-tight">{c.nom}</h3>
-                            
-                          </div>
-                          {/* check bubble */}
-                          <div className={`w-6 h-6 rounded-xl border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
-                            isSelected
-                              ? 'border-emerald-500 bg-emerald-500'
-                              : 'border-slate-200 group-hover:border-emerald-300'
-                          }`}>
-                            {isSelected && <Check size={13} className="text-white" strokeWidth={3} />}
-                          </div>
-                        </div>
-
-                        {/* slogan */}
-                        <div className="mt-3 bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-100">
-                          <p className="text-[9px] font-black text-slate-300 tracking-widest uppercase mb-1">
-                            Profession de foi
-                          </p>
-                          <p className="text-[11px] text-slate-600 font-medium leading-relaxed ">
-                            {c.slogan}
-                          </p>
-                        </div>
-                      </div>
+                        {isSel && <Check size={12} strokeWidth={3} />}
+                      </span>
                     </div>
-                  </div>
+                    <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2 border border-slate-100">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                        Profession de foi
+                      </p>
+                      <p className="text-[11px] leading-relaxed text-slate-600">{c.slogan}</p>
+                    </div>
+                  </button>
                 );
               })}
             </div>
 
-            {/* ── vote blanc ── */}
-            <div
-              onClick={() => setSelected('blanc')}
-              className={`flex items-center justify-between p-5 rounded-2xl border-2 cursor-pointer
-                transition-all duration-200 mb-8 fade-up
-                ${selected === 'blanc'
-                  ? 'border-slate-800 bg-slate-900'
-                  : 'border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50'
-                }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
-                  selected === 'blanc' ? 'bg-white/10' : 'bg-slate-100'
-                }`}>
-                  <ShieldAlert size={16} className={selected === 'blanc' ? 'text-white' : 'text-slate-400'} />
-                </div>
-                <span className={`text-xs font-[900] ${selected === 'blanc' ? 'text-white' : 'text-slate-600'}`}>
-                  S'abstenir / Vote Blanc
-                </span>
-              </div>
-              <div className={`w-6 h-6 rounded-xl border-2 flex items-center justify-center transition-all ${
-                selected === 'blanc' ? 'border-white bg-white' : 'border-slate-200'
+            {/* Vote blanc */}
+            <button type="button" onClick={() => setSelected('blanc')}
+              className={`w-full flex items-center gap-3 rounded-xl border-2 p-4 transition-all animate-fade-up delay-100 ${
+                selected === 'blanc'
+                  ? 'border-slate-700 bg-slate-900'
+                  : 'border-dashed border-slate-200 hover:border-slate-300 hover:bg-slate-50'
               }`}>
-                {selected === 'blanc' && <Check size={13} className="text-slate-900" strokeWidth={3} />}
-              </div>
-            </div>
+              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                selected === 'blanc' ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-400'
+              }`}>
+                <ShieldAlert size={16} />
+              </span>
+              <span className={`text-sm font-semibold ${selected === 'blanc' ? 'text-white' : 'text-slate-600'}`}>
+                S'abstenir / Vote blanc
+              </span>
+            </button>
 
-            {/* ── CTA ── */}
-            <div className="flex flex-col items-center gap-4 pt-6 border-t border-slate-50 fade-up">
+            {/* CTA */}
+            <div className="pt-2 animate-fade-up delay-150">
               {selected ? (
-                <button
-                  type="button"
-                  onClick={() => setIsConfirmOpen(true)}
-                  className="w-full md:w-2/3 py-4 text-center bg-emerald-500 hover:bg-emerald-600
-                    text-white rounded-2xl font-[900] text-sm
-                    shadow-lg shadow-emerald-100 active:scale-[0.98]
-                    transition-all duration-200"
-                >
+                <button type="button" onClick={() => setConfirmOpen(true)}
+                  className="btn-primary w-full justify-center py-3">
                   Continuer vers la confirmation
                 </button>
               ) : (
-                <div className="flex items-center gap-2.5 bg-amber-50 border border-amber-100
-                  rounded-2xl px-5 py-3">
-                  <ShieldAlert size={15} className="text-amber-400 shrink-0" />
-                  <span className="text-[10px] font-black text-amber-500">
-                    Veuillez sélectionner un candidat pour continuer
+                <div className="flex items-center gap-2 rounded-xl border border-amber-200
+                  bg-amber-50 px-4 py-3">
+                  <ShieldAlert size={14} className="shrink-0 text-amber-500" />
+                  <span className="text-xs font-semibold text-amber-700">
+                    Sélectionnez un candidat pour continuer.
                   </span>
                 </div>
               )}
@@ -253,37 +167,39 @@ const VoterChoice = () => {
         )}
       </div>
 
-      <Modal
-        isOpen={isConfirmOpen}
-        onClose={() => !isSubmitting && setIsConfirmOpen(false)}
-        size="sm"
-        title="Confirmer mon vote"
-        subtitle="Vérifiez votre choix avant son enregistrement définitif."
-      >
-        {selectedCandidate && (
-          <div className="space-y-5">
-            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-emerald-700">Scrutin</p>
-              <p className="mt-1 text-sm font-black text-emerald-950">{election.titre}</p>
+      {/* Confirm modal */}
+      <Modal isOpen={confirmOpen} onClose={() => !submitting && setConfirmOpen(false)}
+        size="sm" title="Confirmer mon vote"
+        subtitle="Vérifiez votre choix avant l'enregistrement définitif.">
+        {selectedCand && (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+              <p className="text-[9px] font-black uppercase tracking-wider text-emerald-600">Scrutin</p>
+              <p className="mt-0.5 text-sm font-bold text-emerald-900">{election.titre}</p>
             </div>
-            <div className="flex items-center gap-3 rounded-2xl border border-emerald-100 bg-white p-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-emerald-50 text-emerald-600">
-                {selectedCandidate.photo ? <img src={selectedCandidate.photo} alt="" className="h-full w-full object-cover" /> : <User size={18} />}
+            <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center
+                rounded-xl bg-emerald-50 text-sm font-black text-emerald-700">
+                {selectedCand.initial}
               </div>
-              <div className="min-w-0">
-                <p className="text-[9px] font-black uppercase tracking-[0.16em] text-emerald-600">Votre choix</p>
-                <p className="truncate text-sm font-black text-emerald-950">{selectedCandidate.nom}</p>
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-wider text-emerald-600">Votre choix</p>
+                <p className="text-sm font-bold text-slate-900">{selectedCand.nom}</p>
               </div>
-              <ShieldCheck size={19} className="ml-auto shrink-0 text-emerald-500" />
             </div>
-            <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-[11px] font-medium leading-relaxed text-emerald-900">
+            <p className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3
+              text-[11px] leading-relaxed text-amber-800">
               Cette action est irréversible. Votre bulletin sera enregistré de manière sécurisée.
             </p>
-            <div className="flex gap-3 border-t border-emerald-100 pt-5">
-              <button type="button" onClick={() => setIsConfirmOpen(false)} disabled={isSubmitting} className="modal-secondary-action flex-1">Retour</button>
-              <button type="button" onClick={submitVote} disabled={isSubmitting} className="modal-primary-action flex-[1.4] flex items-center justify-center gap-2">
-                {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                {isSubmitting ? 'Enregistrement…' : 'Voter'}
+            <div className="flex gap-3 border-t border-slate-100 pt-4">
+              <button type="button" onClick={() => setConfirmOpen(false)} disabled={submitting}
+                className="modal-secondary-action flex-1">Retour</button>
+              <button type="button" onClick={submitVote} disabled={submitting}
+                className="modal-primary-action flex-[1.4] flex items-center justify-center gap-2">
+                {submitting
+                  ? <><Loader2 size={14} className="animate-spin" />Enregistrement…</>
+                  : <><Send size={14} />Voter</>
+                }
               </button>
             </div>
           </div>
@@ -291,6 +207,4 @@ const VoterChoice = () => {
       </Modal>
     </VoterLayout>
   );
-};
-
-export default VoterChoice;
+}

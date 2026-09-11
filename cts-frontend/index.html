@@ -1,15 +1,56 @@
 <!doctype html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="./public/shield-check.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CTS-vote-App</title>
 
-<link href="./src/index.css" rel="stylesheet">
+    <!-- SEO ─────────────────────────────────────────────────────────────────── -->
+    <title>CTS Vote — Plateforme électorale Cyber Tech Squad</title>
+    <meta name="description" content="Plateforme de vote électronique sécurisée de la Cyber Tech Squad (UADB). Votez pour les candidats du 2ème Bureau en toute transparence." />
+    <meta name="robots" content="noindex, nofollow" /><!-- élection interne : pas d'indexation publique -->
+    <meta name="theme-color" content="#10b981" />
+
+    <!-- Favicon ─────────────────────────────────────────────────────────────── -->
+    <link rel="icon" type="image/svg+xml" href="/shield-check.svg" />
+
+    <!--
+      Google Fonts — Perf tâche #4
+      ─────────────────────────────────────────────────────────────────────────
+      Problème Lighthouse : la balise @import dans index.css bloque le rendu
+      (render-blocking request, économie estimée 1 140 ms sur mobile 4G lente).
+
+      Solution :
+        1. preconnect sur les deux domaines Google Fonts (DNS + TLS anticipés).
+        2. <link rel="stylesheet"> avec media="print" + onload trick :
+           le navigateur télécharge la feuille en arrière-plan sans bloquer le
+           rendu, puis l'applique dès qu'elle est disponible.
+        3. <noscript> de secours pour les navigateurs sans JS.
+
+      IMPORTANT : supprimez le @import de src/index.css après ce changement
+      (il est maintenant géré ici de façon non-bloquante).
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap"
+      />
+    </noscript>
   </head>
   <body>
     <div id="root"></div>
+    <!--
+      Le bundle principal est injecté par Vite au build.
+      modulepreload des chunks critiques est géré automatiquement par
+      Vite via build.modulePreload (activé dans vite.config.js).
+    -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

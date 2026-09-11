@@ -1,158 +1,105 @@
-import React, { useState, useEffect } from 'react';
-import AdminLayout from '../Components/AdminLayout';
+import { useEffect, useState } from 'react';
 import {
-  UserPlus,
-  Search,
-  MoreVertical,
-  ShieldCheck,
-  ShieldAlert,
-  Loader2,
-  Trash2,
-  Link2,
-  Check,
-  UserCheck,
-  KeyRound,
+  UserPlus, Search, ShieldCheck, ShieldAlert,
+  Trash2, Link2, KeyRound, UserCheck, Check,
 } from 'lucide-react';
+import AdminLayout from '../Components/AdminLayout';
 import AddElectorModal from '../Components/AddElectorModal';
-import { electeurService } from '../services/electeurService';
-import api from '../services/api';
 import Modal from '../Components/Modal';
 import ConfirmDialog from '../Components/ConfirmDialog';
 import Loading from '../Components/Loading';
 import EmptyState from '../Components/EmptyState';
+import { electeurService } from '../services/electeurService';
+import api from '../services/api';
 import toast from 'react-hot-toast';
 
-const Electeurs = () => {
-  const [electeurs, setElecteurs] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [statusFilter, setStatusFilter] = useState('Tous les statuts');
-
-  // États pour l'association à un scrutin
-  const [positions, setPositions] = useState([]);
-  const [showAssociateModal, setShowAssociateModal] = useState(false);
-  const [selectedPosition, setSelectedPosition] = useState('');
-  const [selectedUsers, setSelectedUsers] = useState([]);
-  const [associateSearch, setAssociateSearch] = useState('');
+export default function Electeurs() {
+  const [electeurs,    setElecteurs]    = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [search,       setSearch]       = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [showAdd,      setShowAdd]      = useState(false);
   const [confirmation, setConfirmation] = useState(null);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [temporaryPassword, setTemporaryPassword] = useState(null);
+  const [actionLoading,setActionLoading]= useState(false);
+  const [tmpPassword,  setTmpPassword]  = useState(null);
 
-  // Récupération des électeurs
-  const fetchElecteurs = async () => {
-    setIsLoading(true);
+  // Associate modal
+  const [positions,      setPositions]      = useState([]);
+  const [showAssociate,  setShowAssociate]  = useState(false);
+  const [assocPosition,  setAssocPosition]  = useState('');
+  const [assocUsers,     setAssocUsers]     = useState([]);
+  const [assocSearch,    setAssocSearch]    = useState('');
+
+  const loadElecteurs = async () => {
+    setLoading(true);
+    try { setElecteurs(await electeurService.getAll()); }
+    catch { toast.error('Erreur lors du chargement.'); }
+    finally { setLoading(false); }
+  };
+
+  const loadPositions = async () => {
     try {
-      const data = await electeurService.getAll();
-      setElecteurs(data);
-    } catch (error) {
-      console.error("Erreur lors de la récupération :", error);
-    } finally {
-      setIsLoading(false);
-    }
+      const res = await api.get('/positions');
+      if (res.data?.success) setPositions(res.data.data || []);
+    } catch {}
   };
 
-  // Récupération des postes pour l'association
-  const fetchPositions = async () => {
-    try {
-      const response = await api.get('/positions');
-      if (response.data && response.data.success) {
-        setPositions(response.data.data || []);
-      }
-    } catch (error) {
-      console.error("Erreur chargement des postes", error);
-    }
-  };
+  useEffect(() => { loadElecteurs(); loadPositions(); }, []);
 
-  useEffect(() => {
-    fetchElecteurs();
-    fetchPositions();
-  }, []);
-
-  // Ajout d'un électeur
-  const handleAddElector = async (newElectorData) => {
-    try {
-      const savedElector = await electeurService.create(newElectorData);
-      setElecteurs([savedElector, ...electeurs]);
-      setShowAddModal(false);
-    } catch (error) {
-      toast.error("Impossible d'ajouter l'électeur.");
-    }
-  };
-
-  // Suppression d'un électeur
-  const handleDelete = (id) => {
-    setConfirmation({ type: 'delete', id });
-  };
-
-  // Réinitialisation du mot de passe
-  const handleResetPassword = (userId) => {
-    setConfirmation({ type: 'reset-password', id: userId });
-  };
-
+  /* ── Actions ── */
   const confirmAction = async () => {
     if (!confirmation) return;
     setActionLoading(true);
     try {
       if (confirmation.type === 'delete') {
         await electeurService.delete(confirmation.id);
-        setElecteurs((current) => current.filter((electeur) => electeur.id !== confirmation.id));
+        setElecteurs((p) => p.filter((e) => e.id !== confirmation.id));
         toast.success('Électeur supprimé.');
       } else {
-        const response = await api.put(`/users/${confirmation.id}/reset-password`);
-        setTemporaryPassword(response.data.new_password);
+        const res = await api.put(`/users/${confirmation.id}/reset-password`);
+        setTmpPassword(res.data.new_password);
       }
       setConfirmation(null);
-    } catch (error) {
-      toast.error(confirmation.type === 'delete' ? 'Impossible de supprimer cet électeur.' : 'Impossible de réinitialiser le mot de passe.');
-      console.error(error);
-    } finally {
-      setActionLoading(false);
-    }
+    } catch {
+      toast.error(confirmation.type === 'delete'
+        ? 'Impossible de supprimer.'
+        : 'Impossible de réinitialiser le mot de passe.');
+    } finally { setActionLoading(false); }
   };
 
   const handleAssociate = async () => {
-    if (!selectedPosition || selectedUsers.length === 0) {
-      toast.error('Sélectionnez un poste et au moins un électeur.');
-      return;
+    if (!assocPosition || !assocUsers.length) {
+      toast.error('Sélectionnez un poste et au moins un électeur.'); return;
     }
     try {
-      for (const userId of selectedUsers) {
-        await api.post('/candidates', {
-          user_id: userId,
-          position_id: selectedPosition,
-        });
-      }
-      toast.success(`${selectedUsers.length} électeur(s) associé(s) avec succès.`);
-      setShowAssociateModal(false);
-      setSelectedPosition('');
-      setSelectedUsers([]);
-      setAssociateSearch('');
-    } catch (error) {
-      console.error(error);
-      toast.error("Impossible d'associer les électeurs. Vérifiez les droits administrateur.");
-    }
+      for (const uid of assocUsers)
+        await api.post('/candidates', { user_id: uid, position_id: assocPosition });
+      toast.success(`${assocUsers.length} candidature(s) créée(s).`);
+      setShowAssociate(false);
+      setAssocUsers([]);
+    } catch { toast.error('Impossible d\'associer.'); }
   };
 
-  // Filtrage principal
-  const filteredElecteurs = electeurs.filter((e) => {
-    const matchesSearch =
-      e.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      e.email.toLowerCase().includes(searchTerm.toLowerCase());
-    if (statusFilter === 'Tous les statuts') return matchesSearch;
-    return matchesSearch && e.status === statusFilter;
+  /* ── Filters ── */
+  const filtered = electeurs.filter((e) => {
+    const q = search.toLowerCase();
+    const matchName  = e.nom?.toLowerCase().includes(q);
+    const matchEmail = e.email?.toLowerCase().includes(q);
+    const matchStatus = !statusFilter || e.status === statusFilter;
+    return (matchName || matchEmail) && matchStatus;
   });
 
-  // Filtrage pour la modale d'association
-  const filteredAssociationUsers = electeurs.filter((e) => {
-    return (
-      e.nom.toLowerCase().includes(associateSearch.toLowerCase()) ||
-      e.email.toLowerCase().includes(associateSearch.toLowerCase())
-    );
+  const assocFiltered = electeurs.filter((e) => {
+    const q = assocSearch.toLowerCase();
+    return e.nom?.toLowerCase().includes(q) || e.email?.toLowerCase().includes(q);
   });
+
+  /* ── Avatar ── */
+  const initials = (nom) => nom?.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '?';
 
   return (
     <AdminLayout>
+      {/* Confirm delete / reset */}
       <ConfirmDialog
         isOpen={Boolean(confirmation)}
         onClose={() => !actionLoading && setConfirmation(null)}
@@ -160,255 +107,206 @@ const Electeurs = () => {
         loading={actionLoading}
         tone={confirmation?.type === 'delete' ? 'danger' : 'default'}
         title={confirmation?.type === 'delete' ? 'Supprimer cet électeur ?' : 'Réinitialiser le mot de passe ?'}
-        description={confirmation?.type === 'delete' ? 'Cet électeur sera supprimé définitivement de la plateforme.' : 'Un mot de passe temporaire sera généré. Vous devrez le communiquer à l’utilisateur de façon sécurisée.'}
-        confirmLabel={confirmation?.type === 'delete' ? 'Supprimer' : 'Générer le mot de passe'}
+        description={confirmation?.type === 'delete'
+          ? 'Cet électeur sera supprimé définitivement, ainsi que ses votes.'
+          : 'Un mot de passe temporaire sera généré. Communiquez-le par un canal sécurisé.'}
+        confirmLabel={confirmation?.type === 'delete' ? 'Supprimer' : 'Générer'}
       />
-      <Modal isOpen={Boolean(temporaryPassword)} onClose={() => setTemporaryPassword(null)} size="sm" title="Mot de passe temporaire" subtitle="Communiquez-le à l’utilisateur par un canal sécurisé.">
-        <div className="space-y-5">
-          <code className="block break-all rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-4 text-center text-base font-black text-emerald-950">{temporaryPassword}</code>
-          <button type="button" onClick={() => setTemporaryPassword(null)} className="modal-primary-action w-full">J’ai noté le mot de passe</button>
+
+      {/* Temp password */}
+      <Modal isOpen={Boolean(tmpPassword)} onClose={() => setTmpPassword(null)} size="sm"
+        title="Mot de passe temporaire" subtitle="Transmettez-le par un canal sécurisé.">
+        <div className="space-y-4">
+          <code className="block break-all rounded-xl border border-emerald-100 bg-emerald-50
+            px-4 py-4 text-center text-base font-black text-emerald-900 tracking-widest">
+            {tmpPassword}
+          </code>
+          <button onClick={() => setTmpPassword(null)} className="btn-primary w-full justify-center">
+            J'ai noté le mot de passe
+          </button>
         </div>
       </Modal>
-      {/* Modal Ajouter un électeur */}
-      {showAddModal && (
+
+      {/* Add modal */}
+      {showAdd && (
         <AddElectorModal
-          close={() => setShowAddModal(false)}
-          onAdd={handleAddElector}
+          close={() => setShowAdd(false)}
+          onAdd={() => loadElecteurs()}
         />
       )}
 
-      {/* Modal Association à un scrutin */}
-      {showAssociateModal && (
-        <Modal isOpen onClose={() => setShowAssociateModal(false)} size="lg"
-          title="Associer à un scrutin"
-          subtitle="Sélectionnez un poste et les électeurs à inscrire comme candidats">
-            <div className="flex flex-col gap-6">
-              <div>
-                <label className="modal-label">
-                  Choisir un poste (scrutin)
-                </label>
-                <select
-                  value={selectedPosition}
-                  onChange={(e) => setSelectedPosition(e.target.value)}
-                  className="modal-select"
-                >
-                  <option value="">-- Sélectionnez un poste --</option>
-                  {positions.map((pos) => (
-                    <option key={pos.id} value={pos.id}>
-                      {pos.title} ({pos.is_active == 1 ? 'En ligne' : 'Inactif'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="modal-label">
-                  Sélectionner les électeurs
-                </label>
-                <div className="relative mb-4">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600" size={18} />
-                  <input
-                    type="text"
-                    placeholder="Rechercher un électeur..."
-                    value={associateSearch}
-                    onChange={(e) => setAssociateSearch(e.target.value)}
-                    className="modal-field rounded-xl pl-12"
-                  />
-                </div>
-                <div className="max-h-60 overflow-y-auto space-y-1 bg-emerald-50/70 rounded-2xl p-2 border border-emerald-100">
-                  {filteredAssociationUsers.map((user) => (
-                    <label
-                      key={user.id}
-                      className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors ${
-                        selectedUsers.includes(user.id)
-                          ? 'bg-emerald-400/15 border border-emerald-300/30'
-                          : 'hover:bg-white'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedUsers.includes(user.id)}
-                        onChange={() => {
-                          setSelectedUsers((prev) =>
-                            prev.includes(user.id)
-                              ? prev.filter((id) => id !== user.id)
-                              : [...prev, user.id]
-                          );
-                        }}
-                        className="rounded border-slate-300 text-emerald-500 focus:ring-emerald-400"
-                      />
-                      <div className="flex items-center gap-2 flex-1">
-                        <div className="w-8 h-8 rounded-xl bg-emerald-400/15 flex items-center justify-center text-emerald-200 font-black text-xs border border-emerald-300/20">
-                          {user.nom.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-bold text-sm text-emerald-950">{user.nom}</p>
-                          <p className="text-[11px] text-emerald-800/60">{user.email}</p>
-                        </div>
-                      </div>
-                      {selectedUsers.includes(user.id) && (
-                        <Check size={16} className="text-emerald-300" />
-                      )}
-                    </label>
-                  ))}
-                  {filteredAssociationUsers.length === 0 && (
-                    <p className="text-center text-emerald-800/60 text-sm py-8">Aucun électeur trouvé</p>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-3 border-t border-emerald-100 pt-5">
-              <button
-                onClick={() => setShowAssociateModal(false)}
-                className="modal-secondary-action flex-1"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleAssociate}
-                className="modal-primary-action flex-1 flex items-center justify-center gap-3"
-              >
-                <UserCheck size={20} /> Associer
-              </button>
-            </div>
-        </Modal>
-      )}
-
-      {/* Contenu principal */}
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+      {/* Associate modal */}
+      <Modal isOpen={showAssociate} onClose={() => setShowAssociate(false)} size="lg"
+        title="Associer à un scrutin"
+        subtitle="Sélectionnez un poste et les électeurs à inscrire comme candidats.">
+        <div className="space-y-5">
           <div>
-            <h1 className="text-2xl font-black text-slate-900">Registre Électoral</h1>
-            <p className="text-slate-500 text-xs font-medium mt-1">Gérez la liste des membres</p>
+            <label className="modal-label">Poste (scrutin)</label>
+            <select value={assocPosition} onChange={(e) => setAssocPosition(e.target.value)} className="modal-select">
+              <option value="">-- Sélectionnez un poste --</option>
+              {positions.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title} ({p.is_active == 1 ? 'Actif' : 'Inactif'})
+                </option>
+              ))}
+            </select>
           </div>
-          <div className="flex gap-3">
-            {/* Bouton Associer à un scrutin */}
-            <button
-              onClick={() => {
-                setSelectedPosition('');
-                setSelectedUsers([]);
-                setAssociateSearch('');
-                setShowAssociateModal(true);
-              }}
-              className="flex-1 md:flex-none p-3 bg-amber-500 text-white rounded-2xl shadow-lg shadow-amber-100 hover:bg-amber-600 transition-all flex items-center justify-center gap-2 font-bold text-xs"
-            >
-              <Link2 size={18} /> Associer à un scrutin
+
+          <div>
+            <label className="modal-label">Électeurs</label>
+            <div className="relative mb-2">
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input value={assocSearch} onChange={(e) => setAssocSearch(e.target.value)}
+                className="modal-field pl-9" placeholder="Rechercher…" />
+            </div>
+            <div className="max-h-52 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2">
+              {assocFiltered.map((u) => {
+                const checked = assocUsers.includes(u.id);
+                return (
+                  <label key={u.id} className={`flex cursor-pointer items-center gap-3
+                    rounded-lg px-3 py-2 transition-colors ${
+                    checked ? 'bg-emerald-50' : 'hover:bg-slate-50'
+                  }`}>
+                    <input type="checkbox" checked={checked}
+                      onChange={() => setAssocUsers((p) =>
+                        p.includes(u.id) ? p.filter((id) => id !== u.id) : [...p, u.id]
+                      )}
+                      className="accent-emerald-500 h-4 w-4 rounded" />
+                    <div className="avatar-initials h-7 w-7 text-[10px] shrink-0">
+                      {initials(u.nom)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-slate-800">{u.nom}</p>
+                      <p className="truncate text-[10px] text-slate-400">{u.email}</p>
+                    </div>
+                    {checked && <Check size={13} className="ml-auto shrink-0 text-emerald-500" />}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex gap-3 border-t border-slate-100 pt-4">
+            <button onClick={() => setShowAssociate(false)} className="modal-secondary-action flex-1">
+              Annuler
             </button>
-            {/* Bouton Ajouter un électeur */}
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="flex-1 md:flex-none p-3 bg-emerald-500 text-white rounded-2xl shadow-lg shadow-emerald-100 hover:bg-emerald-600 transition-all flex items-center justify-center gap-2 font-bold text-xs"
-            >
-              <UserPlus size={18} /> Ajouter un électeur
+            <button onClick={handleAssociate}
+              className="modal-primary-action flex-1 flex items-center justify-center gap-2">
+              <UserCheck size={15} />Associer
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Page */}
+      <div className="mx-auto max-w-6xl space-y-5">
+
+        {/* Header */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between animate-fade-up">
+          <div>
+            <h1 className="text-xl font-black text-slate-900">Registre Électoral</h1>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {electeurs.length} électeur{electeurs.length > 1 ? 's' : ''} inscrits
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => { setAssocUsers([]); setAssocPosition(''); setShowAssociate(true); }}
+              className="btn-secondary">
+              <Link2 size={14} />Associer à un scrutin
+            </button>
+            <button onClick={() => setShowAdd(true)} className="btn-primary">
+              <UserPlus size={14} />Ajouter
             </button>
           </div>
         </div>
 
-        {/* Barre de recherche et filtre */}
-        <div className="bg-white p-4 rounded-[28px] border border-slate-100 mb-6 flex flex-col md:flex-row gap-4 items-center shadow-sm">
-          <div className="relative w-full md:flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Rechercher par nom ou email..."
-              className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-emerald-400 font-medium"
-            />
+        {/* Filters */}
+        <div className="flex flex-col gap-3 sm:flex-row animate-fade-up delay-50">
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher par nom ou email…"
+              className="search-input w-full pl-10" />
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full md:w-48 py-3 bg-slate-50 border-none rounded-xl text-sm font-bold text-slate-600 focus:ring-2 focus:ring-emerald-400"
-          >
-            <option>Tous les statuts</option>
-            <option>Validé</option>
-            <option>En attente</option>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+            className="modal-select w-full sm:w-44">
+            <option value="">Tous les statuts</option>
+            <option value="Validé">Validé</option>
+            <option value="Suspendu">Suspendu</option>
           </select>
         </div>
 
-        {/* Tableau des électeurs */}
-        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden min-h-[400px] flex flex-col">
-          {isLoading ? (
-            <Loading text="Chargement des électeurs…" />
+        {/* Table */}
+        <div className="content-card animate-fade-up delay-100">
+          {loading ? (
+            <Loading text="Chargement des électeurs…" className="py-16" />
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-slate-50/50 border-b border-slate-50">
+              <table className="data-table">
+                <thead>
                   <tr>
-                    <th className="px-6 py-5 text-[10px] font-black text-slate-400">Électeur</th>
-                    <th className="px-6 py-5 text-[10px] font-black text-slate-400">Status Security</th>
-                    <th className="px-6 py-5 text-right">Actions</th>
+                    <th>Électeur</th>
+                    <th>Statut</th>
+                    <th className="text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {filteredElecteurs.map((user) => (
-                    <tr key={user.id} className="hover:bg-slate-50/80 transition-all group">
-                      <td className="px-6 py-4">
+                <tbody>
+                  {filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={3}>
+                        <EmptyState icon={UserCheck} title="Aucun électeur trouvé"
+                          description="Modifiez vos critères de recherche." />
+                      </td>
+                    </tr>
+                  ) : filtered.map((u) => (
+                    <tr key={u.id}>
+                      {/* Electeur */}
+                      <td>
                         <div className="flex items-center gap-3">
-                          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center text-emerald-600 font-black text-sm border border-emerald-200/50 shadow-sm">
-                            {user.nom.charAt(0)}
+                          <div className="avatar-initials h-9 w-9 text-xs shrink-0">
+                            {initials(u.nom)}
                           </div>
                           <div>
-                            <p className="font-bold text-slate-800 text-sm">{user.nom}</p>
-                            <p className="text-[11px] text-slate-400 font-medium">{user.email}</p>
+                            <p className="text-sm font-semibold text-slate-800">{u.nom}</p>
+                            <p className="text-[11px] text-slate-400">{u.email}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          {user.status === 'Validé' ? (
-                            <span className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full text-[9px] font-black">
-                              <ShieldCheck size={14} /> {user.status}
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1.5 text-amber-500 bg-amber-50 px-3 py-1 rounded-full text-[9px] font-black">
-                              <ShieldAlert size={14} /> {user.status}
-                            </span>
-                          )}
-                        </div>
+
+                      {/* Status */}
+                      <td>
+                        <span className={`badge ${
+                          u.status === 'Validé' ? 'badge-green' : 'badge-amber'
+                        }`}>
+                          {u.status === 'Validé'
+                            ? <><ShieldCheck size={10} />Validé</>
+                            : <><ShieldAlert size={10} />{u.status}</>
+                          }
+                        </span>
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          {/* Réinitialiser le mot de passe */}
+
+                      {/* Actions */}
+                      <td>
+                        <div className="flex items-center justify-end gap-1">
                           <button
-                            onClick={() => handleResetPassword(user.id)}
-                            className="p-2.5 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
-                            title="Réinitialiser le mot de passe"
-                          >
-                            <KeyRound size={18} />
+                            onClick={() => setConfirmation({ type: 'reset-password', id: u.id })}
+                            className="action-btn-key" title="Réinitialiser le mot de passe">
+                            <KeyRound size={14} />
                           </button>
-                          {/* Supprimer */}
                           <button
-                            onClick={() => handleDelete(user.id)}
-                            className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                          >
-                            <Trash2 size={18} />
+                            onClick={() => { setAssocUsers([u.id]); setAssocPosition(''); setShowAssociate(true); }}
+                            className="action-btn-link" title="Associer à un scrutin">
+                            <Link2 size={14} />
                           </button>
-                          {/* Associer cette personne à un scrutin (pré-sélectionné) */}
                           <button
-                            onClick={() => {
-                              setSelectedUsers([user.id]);
-                              setSelectedPosition('');
-                              setAssociateSearch('');
-                              setShowAssociateModal(true);
-                            }}
-                            className="p-2.5 text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all"
-                            title="Associer à un scrutin"
-                          >
-                            <Link2 size={18} />
-                          </button>
-                          <button className="p-2.5 text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all">
-                            <MoreVertical size={18} />
+                            onClick={() => setConfirmation({ type: 'delete', id: u.id })}
+                            className="action-btn-delete" title="Supprimer">
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </td>
                     </tr>
                   ))}
-                  {filteredElecteurs.length === 0 && (
-                    <tr>
-                      <td colSpan="3"><EmptyState icon={UserCheck} title="Aucun électeur trouvé" description="Modifiez vos critères de recherche ou ajoutez un électeur." /></td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
             </div>
@@ -417,6 +315,4 @@ const Electeurs = () => {
       </div>
     </AdminLayout>
   );
-};
-
-export default Electeurs;
+}

@@ -1,253 +1,176 @@
-import React, { useState, useEffect } from 'react';
-import VoterLayout from "../Components/VoterLayout";
-import { useNavigate } from "react-router";
-import { Vote, CheckCircle, Clock, ArrowRight, Zap, CheckSquare, ShieldCheck } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
+import { Vote, CheckSquare, Clock, ArrowRight, ShieldCheck, Zap } from 'lucide-react';
+import VoterLayout from '../Components/VoterLayout';
+import Loading from '../Components/Loading';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
-import Loading from '../Components/Loading';
 
-/* ── Election row avec bouton Déjà voté ── */
-const ElectionRow = ({ election, index, onVote, hasVoted }) => {
-  const isActive = election.type === 'active';
-
+function ScrutinRow({ election, hasVoted, onVote, index }) {
+  const active = election.is_active == 1;
   return (
-    <article
-      className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-lg hover:shadow-emerald-950/5 fade-up"
-      style={{ animationDelay: `${index * 70}ms` }}
+    <div
+      className={`flex flex-col gap-3 rounded-xl border bg-white p-4 transition-all
+        sm:flex-row sm:items-center animate-fade-up ${
+        hasVoted ? 'border-slate-100' : 'border-slate-200 hover:border-emerald-200 hover:shadow-sm'
+      }`}
+      style={{ animationDelay: `${index * 60}ms` }}
     >
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-400 opacity-0 transition-opacity group-hover:opacity-100" />
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${hasVoted ? 'bg-slate-100 text-slate-400' : 'bg-emerald-50 text-emerald-600'}`}>
-          {hasVoted ? <CheckSquare size={20} /> : <Vote size={20} />}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[9px] font-black uppercase tracking-[0.16em] text-emerald-600">Scrutin disponible</p>
-          <h3 className="mt-1 truncate text-base font-black text-slate-900">{election.titre}</h3>
-          <p className="mt-1 flex items-center gap-1.5 text-[11px] font-medium text-slate-400"><Clock size={12} /> Mis à jour le {election.date}</p>
-        </div>
-        {hasVoted ? (
-          <span className="inline-flex w-fit items-center gap-1.5 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[9px] font-black text-emerald-600">
-            <CheckSquare size={10} />
-            Déjà voté
-          </span>
-        ) : isActive ? (
-          <span className="inline-flex w-fit items-center gap-1.5 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[9px] font-black text-emerald-600">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-            </span>
-            En Cours
-          </span>
-        ) : (
-          <span className="inline-flex w-fit items-center gap-1.5 rounded-xl border border-amber-100 bg-amber-50 px-3 py-1.5 text-[9px] font-black text-amber-500">
-            <Clock size={9} />
-            Terminé
-          </span>
-        )}
-        {isActive && !hasVoted ? (
-          <button
-            onClick={() => onVote(election)}
-            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-[10px] font-black text-white shadow-lg shadow-emerald-500/20 transition-all
-              hover:-translate-y-0.5 hover:bg-emerald-700
-              active:scale-95 transition-all duration-200"
-          >
-            Voter maintenant
-            <ArrowRight size={13} />
-          </button>
-        ) : hasVoted ? (
-          <span className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 px-4 py-3 text-slate-400
-            rounded-2xl text-[10px] font-black cursor-not-allowed">
-            <CheckSquare size={12} />
-            Vote enregistré
-          </span>
-        ) : (
-          <span className="text-slate-300 text-[10px] font-black">Fermé</span>
-        )}
+      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+        hasVoted ? 'bg-slate-100 text-slate-400' : 'bg-emerald-50 text-emerald-600'
+      }`}>
+        {hasVoted ? <CheckSquare size={18} strokeWidth={2} /> : <Vote size={18} strokeWidth={2} />}
       </div>
-    </article>
-  );
-};
 
-/* ── Main page ── */
-const VoterDashboard = () => {
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-slate-800">{election.titre}</p>
+        <p className="flex items-center gap-1 text-[10px] text-slate-400">
+          <Clock size={10} />{election.date}
+        </p>
+      </div>
+
+      {hasVoted ? (
+        <span className="badge badge-green w-fit"><CheckSquare size={10} />Voté</span>
+      ) : active ? (
+        <span className="badge badge-green w-fit"><span className="status-dot-live" />En cours</span>
+      ) : (
+        <span className="badge badge-slate w-fit">Terminé</span>
+      )}
+
+      {active && !hasVoted ? (
+        <button onClick={() => onVote()} className="btn-primary shrink-0">
+          Voter <ArrowRight size={13} />
+        </button>
+      ) : hasVoted ? (
+        <span className="flex shrink-0 items-center gap-1.5 rounded-lg bg-slate-100
+          px-3 py-2 text-[10px] font-semibold text-slate-400">
+          <CheckSquare size={12} />Enregistré
+        </span>
+      ) : (
+        <span className="text-[10px] font-semibold text-slate-300">Fermé</span>
+      )}
+    </div>
+  );
+}
+
+export default function VoterDashboard() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    completed: 0,
-    remaining: 0,
-    total: 0,
-  });
+  const [loading,   setLoading]   = useState(true);
   const [elections, setElections] = useState([]);
-  const [userVotedIds, setUserVotedIds] = useState([]);
-
-  // Récupérer les votes déjà effectués par l'utilisateur
-  const fetchUserVotes = async () => {
-    try {
-      const response = await api.get('/votes/my');
-      if (Array.isArray(response.data)) {
-        const votedIds = response.data.map(vote => vote.position_id);
-        setUserVotedIds(votedIds);
-        return votedIds;
-      }
-    } catch (error) {
-      console.warn("Impossible de récupérer les votes:", error);
-    }
-    return [];
-  };
+  const [votedIds,  setVotedIds]  = useState([]);
+  const [stats,     setStats]     = useState({ total: 0, completed: 0 });
 
   useEffect(() => {
-    const fetchAllData = async () => {
+    (async () => {
       try {
-        setLoading(true);
-
-        // Récupérer les élections actives et en déduire le suivi individuel.
-        try {
-          const posRes = await api.get('/positions');
-          if (posRes.data?.success) {
-            const allPositions = [
-              ...(posRes.data.data || []),
-              ...(posRes.data.failed || []),
-            ];
-            
-            const activeElections = allPositions
-              .filter(pos => pos.is_active == 1)
-              .map(pos => ({
-                id: pos.id,
-                titre: pos.title,
-                date: pos.updated_at
-                  ? new Date(pos.updated_at).toLocaleDateString('fr-FR', {
-                      day: 'numeric', month: 'long', year: 'numeric',
-                    })
-                  : 'Date inconnue',
-                type: 'active',
-                description: pos.description,
-                created_at: pos.created_at,
-              }))
-              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            
-            const voted = await fetchUserVotes();
-            const completed = activeElections.filter(({ id }) => voted.includes(id)).length;
-            setStats({ completed, remaining: activeElections.length - completed, total: activeElections.length });
-            setElections(activeElections);
-          }
-        } catch (error) {
-          console.error("Erreur chargement des positions", error);
+        const [posRes, votesRes] = await Promise.all([
+          api.get('/positions'),
+          api.get('/votes/my'),
+        ]);
+        const voted = Array.isArray(votesRes.data)
+          ? votesRes.data.map((v) => v.position_id)
+          : [];
+        setVotedIds(voted);
+        if (posRes.data?.success) {
+          const active = (posRes.data.data || [])
+            .filter((p) => p.is_active == 1)
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+            .map((p) => ({
+              id: p.id, titre: p.title, is_active: p.is_active,
+              date: p.updated_at
+                ? new Date(p.updated_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+                : '—',
+            }));
+          setElections(active);
+          setStats({ total: active.length, completed: active.filter((e) => voted.includes(e.id)).length });
         }
-
-      } catch (error) {
-        console.error("Erreur de synchronisation :", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAllData();
+      } finally { setLoading(false); }
+    })();
   }, []);
 
-  const handleStartVote = (election) => {
-    navigate('/voterBallot');
-  };
+  const percent  = stats.total ? Math.round((stats.completed / stats.total) * 100) : 0;
+  const fullName = user ? `${user.first_name} ${user.last_name}` : '';
 
-  const userFullName = user ? `${user.first_name} ${user.last_name}` : 'Utilisateur';
-  const isLoading = authLoading || loading;
+  if (authLoading || loading) return <VoterLayout activePage="dashboard"><Loading text="Chargement…" className="min-h-[60vh]" /></VoterLayout>;
 
   return (
     <VoterLayout activePage="dashboard">
-      <style>{`
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(14px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .fade-up { animation: fadeUp .42s ease both; }
-      `}</style>
+      <div className="mx-auto max-w-3xl space-y-5">
 
-      {isLoading ? (
-        <Loading text="Chargement de vos scrutins…" className="py-24" />
-      ) : (
-        <div className="animate-in fade-in duration-500">
+        {/* Header */}
+        <div className="animate-fade-up">
+          <h1 className="text-xl font-black text-slate-900">Tableau de bord</h1>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Bienvenue{fullName ? `, ${fullName}` : ''} — espace de vote sécurisé
+          </p>
+        </div>
 
-          {/* ── header ── */}
-          <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end fade-up">
+        {/* Progress */}
+        <div className="content-card p-5 animate-fade-up delay-50">
+          <div className="flex items-center justify-between gap-4">
             <div>
-            <h1 className="text-xl md:text-2xl font-[900] text-slate-900">
-              Tableau de bord électeur
-            </h1>
-            <p className="text-slate-400 font-medium mt-1 text-xs">
-              Bienvenue{' '}
-              <span className="font-black text-slate-600">{userFullName}</span>
-              {' '}dans votre espace de vote sécurisé
-            </p>
-            </div>
-            <div className="inline-flex w-fit items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-[10px] font-bold text-emerald-700">
-              <ShieldCheck size={14} /> Session sécurisée
-            </div>
-          </div>
-
-          <section className="mb-6 rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-white p-5 shadow-sm fade-up">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-700">Votre progression</p><h2 className="mt-1 text-lg font-black text-slate-900">{stats.completed} vote{stats.completed > 1 ? 's' : ''} enregistré{stats.completed > 1 ? 's' : ''} sur {stats.total}</h2><p className="mt-1 text-xs text-slate-500">{stats.remaining ? `${stats.remaining} scrutin${stats.remaining > 1 ? 's' : ''} reste${stats.remaining > 1 ? 'nt' : ''} à consulter.` : 'Vous êtes à jour pour les scrutins ouverts.'}</p></div>
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-lg font-black text-emerald-700 shadow-sm ring-1 ring-emerald-100">{stats.total ? Math.round((stats.completed / stats.total) * 100) : 0}%</div>
-            </div>
-            <div className="mt-4 h-2 overflow-hidden rounded-full bg-emerald-100"><div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${stats.total ? (stats.completed / stats.total) * 100 : 0}%` }} /></div>
-          </section>
-
-          {/* ── Liste des scrutins ── */}
-          <div className="fade-up" style={{ animationDelay: '220ms' }}>
-          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="px-7 py-6 border-b border-slate-50 flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-[900] text-slate-900">Scrutins disponibles</h2>
-                <p className="text-[9px] font-bold text-slate-400 mt-0.5">
-                  {elections.length} scrutin{elections.length !== 1 ? 's' : ''} ouvert{elections.length !== 1 ? 's' : ''}
-                </p>
-              </div>
-              {elections.length > 0 && (
-                <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-full">
-                  <Zap size={9} className="text-emerald-500" />
-                  <span className="text-[9px] font-black text-emerald-600">Live</span>
-                </div>
-              )}
-            </div>
-
-            <div className="grid gap-3 p-4 sm:grid-cols-2">
-              {elections.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="w-16 h-16 bg-slate-50 rounded-[24px] border-2 border-dashed border-slate-200 flex items-center justify-center mb-4">
-                    <Vote size={26} className="text-slate-200" />
-                  </div>
-                  <p className="text-slate-400 font-black text-sm">Aucun scrutin ouvert</p>
-                  <p className="text-slate-300 font-bold text-[10px] mt-1">
-                    Revenez plus tard pour voter
-                  </p>
-                </div>
-              ) : (
-                elections.map((election, i) => (
-                  <ElectionRow
-                    key={election.id}
-                    election={election}
-                    index={i}
-                    onVote={handleStartVote}
-                    hasVoted={userVotedIds.includes(election.id)}
-                  />
-                ))
-              )}
-            </div>
-
-            <div className="px-7 py-4 border-t border-slate-50 flex items-center gap-2">
-              <ShieldCheck size={12} className="text-emerald-500" />
-              <p className="text-[9px] font-bold text-slate-300">
-                Registre audité — votes anonymisés par Cyber Tech Squad
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-700">
+                Votre progression
+              </p>
+              <p className="mt-1 text-lg font-black text-slate-900">
+                {stats.completed} / {stats.total} vote{stats.total > 1 ? 's' : ''}
+              </p>
+              <p className="mt-0.5 text-xs text-slate-500">
+                {stats.completed === stats.total && stats.total > 0
+                  ? 'Tous vos votes sont à jour ✓'
+                  : `${stats.total - stats.completed} scrutin${stats.total - stats.completed > 1 ? 's' : ''} restant${stats.total - stats.completed > 1 ? 's' : ''}`
+                }
               </p>
             </div>
-          </section>
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center
+              rounded-2xl border border-emerald-100 bg-emerald-50">
+              <span className="text-lg font-black text-emerald-700 tabular-nums">{percent}%</span>
+            </div>
+          </div>
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-emerald-500 transition-all duration-700"
+              style={{ width: `${percent}%` }} />
+          </div>
+        </div>
 
+        {/* Scrutins */}
+        <div className="content-card animate-fade-up delay-100">
+          <div className="content-card-header">
+            <div>
+              <p className="text-sm font-bold text-slate-800">Scrutins disponibles</p>
+              <p className="mt-0.5 text-xs text-slate-400">{elections.length} ouvert{elections.length > 1 ? 's' : ''}</p>
+            </div>
+            {elections.length > 0 && (
+              <span className="badge badge-green"><Zap size={10} />Live</span>
+            )}
           </div>
 
+          <div className="space-y-2 p-4">
+            {elections.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 py-16 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl
+                  border-2 border-dashed border-slate-200 bg-slate-50">
+                  <Vote size={22} className="text-slate-300" />
+                </div>
+                <p className="text-sm font-semibold text-slate-500">Aucun scrutin ouvert</p>
+                <p className="text-xs text-slate-400">Revenez plus tard.</p>
+              </div>
+            ) : elections.map((el, i) => (
+              <ScrutinRow
+                key={el.id} election={el} index={i}
+                hasVoted={votedIds.includes(el.id)}
+                onVote={() => navigate('/voterBallot')}
+              />
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 border-t border-slate-100 px-5 py-3">
+            <ShieldCheck size={12} className="text-emerald-500" />
+            <p className="text-[10px] text-slate-400">Votes anonymisés · Registre audité CTS</p>
+          </div>
         </div>
-      )}
+      </div>
     </VoterLayout>
   );
-};
-
-export default VoterDashboard;
+}

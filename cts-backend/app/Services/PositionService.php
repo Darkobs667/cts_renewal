@@ -3,22 +3,19 @@
 namespace App\Services;
 
 use App\Models\Position;
+use App\Models\Vote;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\Auth;
 
-class PositionService 
+class PositionService
 {
     /**
-     * Créer un nouveau poste (Réservé à l'admin)
+     * Créer un nouveau poste (réservé à l'admin).
+     * La vérification du rôle est déjà faite par le middleware CheckAdmin ;
+     * on la conserve ici comme garde-fou défensif.
      */
     public function create(array $data): Position
     {
-        $user = auth('api')->user();
-
-        // Vérification des droits admin basée sur l'énumération de la table users
-        if (!$user || $user->role !== 'admin') {
-            throw new \Exception('Seul un administrateur peut créer un poste.', 403);
-        }
+        $this->requireAdmin();
 
         return Position::create([
             'title'       => $data['title'],
@@ -28,74 +25,76 @@ class PositionService
     }
 
     /**
-     * Récupérer tous les postes (avec leurs candidats)
+     * Récupérer tous les postes avec leurs candidats validés et l'utilisateur associé.
      */
     public function getAll(): Collection
     {
-        // On charge les candidats et les informations utilisateur liées pour l'affichage
-        return Position::with(['candidates.user'])->get();
+        return Position::with([
+            'candidates' => fn ($q) => $q->where('status', 'valide')->with('user'),
+        ])->get();
     }
 
     /**
-     * Mettre à jour un poste (Titre, description ou activation)
+     * Mettre à jour un poste.
      */
     public function update(Position $position, array $data): bool
-{
-    $user = auth('api')->user();
-    if (!$user || $user->role !== 'admin') {
-        throw new \Exception('Action réservée aux administrateurs.', 403);
-    }
-
-    return $position->update($data); // retourne un booléen
-}
-
-    /**
-     * Basculer l'état d'un poste (Activer/Désactiver les votes)
-     */
-  public function toggleStatus(Position $position): void
-{
-    $user = auth('api')->user();
-    if (!$user || $user->role !== 'admin') {
-        throw new \Exception('Action réservée aux administrateurs.', 403);
-    }
-
-    $position->is_active = !$position->is_active;
-
-    if ($position->is_active) {
-        // Si on active le scrutin et qu'il n'a jamais été démarré, on enregistre la date actuelle
-        if (!$position->started_at) {
-            $position->started_at = now();
-        }
-    } else {
-        // Si on désactive, on efface started_at pour un éventuel prochain démarrage
-        $position->started_at = null;
-    }
-
-    $position->save();
-}
-
-    /**
-     * Supprimer un poste
-     * Note: La suppression entraînera celle des candidats et votes associés (onDelete cascade)
-     */
-   public function delete(Position $position): bool
     {
-    $user = auth('api')->user();
-    if (!$user || $user->role !== 'admin') {
-        throw new \Exception('Seul un administrateur peut supprimer un poste.', 403);
-    }
+        $this->requireAdmin();
 
-    // Supprime d'abord les candidats (évite l'erreur de clé étrangère)
-    $position->candidates()->delete();
-
-    return $position->delete(); // bool
+        return $position->update($data);
     }
 
     /**
-     * Récupérer les postes qui sont actuellement ouverts aux votes
+     * Basculer l'état actif/inactif d'un poste.
+     */
+    public function toggleStatus(Position $position): void
+    {
+        $this->requireAdmin();
+
+        $position->is_active = !$position->is_active;
+
+        if ($position->is_active && !$position->started_at) {
+            $position->started_at = now();
+        } elseif (!$position->is_active) {
+            $position->started_at = null;
+        }
+
+        $position->save();
+    }
+
+    /**
+     * Supprimer un poste et toutes ses données associées.
+     * Ordre : votes → candidats → position (évite les erreurs de FK).
+     */
+    public function delete(Position $position): bool
+    {
+        $this->requireAdmin();
+
+        // 1. Supprimer les votes liés aux candidats de ce poste.
+        Vote::where('position_id', $position->id)->delete();
+
+        // 2. Supprimer les candidatures.
+        $position->candidates()->delete();
+
+        // 3. Supprimer le poste.
+        return (bool) $position->delete();
+    }
+
+    /**
+     * Postes actuellement ouverts aux votes.
      */
     public function getActivePositions(): Collection
     {
         return Position::where('is_active', true)->get();
+    }
+
+    // ─── Private ──────────────────────────────────────────────────────────────
+
+    private function requireAdmin(): void
+    {
+        $user = auth('api')->user();
+        if (!$user || $user->role !== 'admin') {
+            throw new \Exception('Action réservée aux administrateurs.', 403);
+        }
     }
 }

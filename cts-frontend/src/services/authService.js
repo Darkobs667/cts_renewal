@@ -1,47 +1,35 @@
 // src/services/authService.js
 import api from './api';
 
+// L'intercepteur axios dans api.js injecte automatiquement le header
+// Authorization: Bearer <token> sur toutes les requêtes sortantes.
+// Il ne faut donc JAMAIS le re-déclarer manuellement dans les méthodes ci-dessous.
+
 const authService = {
     register: async (userData) => {
         try {
-            const response = await api.post(`/register`, userData, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                }
-            });
-            
+            const response = await api.post('/register', userData);
             return response.data;
         } catch (error) {
-            if (error.response && error.response.data) {
-                throw error.response.data;
-            }
-            throw new Error("Impossible de contacter le serveur de vote.");
+            if (error.response?.data) throw error.response.data;
+            throw new Error('Impossible de contacter le serveur de vote.');
         }
     },
 
     login: async (credentials) => {
         try {
-            const response = await api.post(`/login`, credentials, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                }
-            });
-
+            const response = await api.post('/login', credentials);
             const backendData = response.data.data;
 
-            if (backendData && backendData.access_token) {
+            if (backendData?.access_token) {
                 localStorage.setItem('user_token', backendData.access_token);
                 localStorage.setItem('user_tokenrefsh', backendData.refresh_token);
             }
 
             return response.data;
         } catch (error) {
-            if (error.response && error.response.data) {
-                throw error.response.data;
-            }
-            throw new Error("Erreur lors de la connexion au serveur.");
+            if (error.response?.data) throw error.response.data;
+            throw new Error('Erreur lors de la connexion au serveur.');
         }
     },
 
@@ -52,36 +40,30 @@ const authService = {
     },
 
     me: async () => (await api.get('/auth/me')).data.user,
-    
-    // NOUVELLE MÉTHODE: Vérifier si l'utilisateur est admin via le serveur
+
+    /**
+     * Correction #10 : l'en-tête Authorization est géré par l'intercepteur d'api.js.
+     * On ne le re-déclare plus ici.
+     */
     isAdmin: async () => {
-        const token = localStorage.getItem('user_token');
-        if (!token) return false;
-        
+        if (!localStorage.getItem('user_token')) return false;
         try {
-            const response = await api.get('/auth/check-admin', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const response = await api.get('/auth/check-admin');
             return response.data.is_admin === true;
-        } catch (error) {
+        } catch {
             return false;
         }
     },
-    
-    // NOUVELLE MÉTHODE: Obtenir le vrai rôle depuis le serveur
+
     getRealUserRole: async () => {
-        const token = localStorage.getItem('user_token');
-        if (!token) return null;
-        
+        if (!localStorage.getItem('user_token')) return null;
         try {
-            const response = await api.get('/auth/verify-role', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            return response.data.data.role;
-        } catch (error) {
+            const response = await api.get('/auth/verify-role');
+            return response.data.data.role ?? null;
+        } catch {
             return null;
         }
-    }
+    },
 };
 
 export default authService;

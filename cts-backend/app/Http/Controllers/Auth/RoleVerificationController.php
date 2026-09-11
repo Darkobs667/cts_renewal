@@ -1,55 +1,51 @@
 <?php
-// app/Http/Controllers/Auth/RoleVerificationController.php
 
 namespace App\Http\Controllers\Auth;
 
+// Ce contrôleur est conservé pour compatibilité mais ses fonctionnalités
+// sont couvertes par AuthController::verifyRole() et AuthController::checkAdmin().
+// Il utilise le bon package JWT du projet : php-open-source-saver/jwt-auth.
+
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Tymon\JWTAuth\Facades\JWTAuth;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
+use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
 
 class RoleVerificationController extends Controller
 {
-    public function verifyRole(Request $request)
+    public function verifyRole(Request $request): JsonResponse
     {
         try {
             $user = JWTAuth::parseToken()->authenticate();
-            
+
             return response()->json([
                 'success' => true,
-                'data' => [
-                    'role' => $user->role,
-                    'id' => $user->id,
-                    'email' => $user->email,
+                'data'    => [
+                    'id'         => $user->id,
+                    'role'       => $user->role,
                     'first_name' => $user->first_name,
-                    'last_name' => $user->last_name,
-                    'is_admin' => $user->role === 'admin'
-                ]
+                    'last_name'  => $user->last_name,
+                    'email'      => $user->email,
+                    'is_admin'   => $user->role === 'admin',
+                ],
             ]);
-            
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Token invalide ou expiré'
-            ], 401);
+        } catch (JWTException $e) {
+            return response()->json(['success' => false, 'error' => 'Token invalide ou expiré'], 401);
         }
     }
-    
-    // Endpoint spécifique pour vérifier si l'utilisateur est admin
-    public function checkAdmin(Request $request)
+
+    public function checkAdmin(Request $request): JsonResponse
     {
         try {
             $user = JWTAuth::parseToken()->authenticate();
-            
+
             return response()->json([
-                'success' => true,
-                'is_admin' => $user->role === 'admin'
+                'success'  => true,
+                'is_admin' => $user->role === 'admin',
             ]);
-            
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'is_admin' => false
-            ], 401);
+        } catch (JWTException $e) {
+            return response()->json(['success' => false, 'is_admin' => false], 401);
         }
     }
 }

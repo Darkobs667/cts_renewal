@@ -1,0 +1,20 @@
+# robots.txt — Cyber Tech Squad Vote App
+# Application électorale interne : on bloque l'indexation publique
+# tout en autorisant la navigation normale des crawlers légitimes.
+
+User-agent: *
+Disallow: /admin
+Disallow: /candidatures
+Disallow: /votes-elections
+Disallow: /candidats
+Disallow: /electeurs
+Disallow: /adminresultsPage
+Disallow: /voterDashboard
+Disallow: /voterBallot
+Disallow: /voterHistory
+Disallow: /voterChoice
+Disallow: /voterRecap
+Disallow: /scrutins
+Allow: /login
+Allow: /signup
+Allow: /$

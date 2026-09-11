@@ -1,145 +1,151 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Search, CheckCircle2, XCircle, User, MailOpen } from 'lucide-react';
 import AdminLayout from '../Components/AdminLayout';
-import { Loader2, User, XCircle, CheckCircle2, AlertTriangle, Search } from 'lucide-react';
+import Loading from '../Components/Loading';
+import EmptyState from '../Components/EmptyState';
 import api from '../services/api';
 import { candidatePhotoUrl } from '../utils/media';
 import toast from 'react-hot-toast';
 
-const AdminCandidatures = () => {
+export default function AdminCandidatures() {
   const [candidatures, setCandidatures] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [processing, setProcessing] = useState({}); // { id: true/false }
+  const [loading,      setLoading]      = useState(true);
+  const [search,       setSearch]       = useState('');
+  const [processing,   setProcessing]   = useState({});
 
-  const fetchCandidatures = async () => {
+  const load = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/candidates', { params: { status: 'en_attente' } });
-      if (response.data?.success) {
-        const data = response.data.data.map(c => ({
+      const res = await api.get('/candidates', { params: { status: 'en_attente' } });
+      if (res.data?.success) {
+        setCandidatures(res.data.data.map((c) => ({
           ...c,
-          user_nom: c.user ? `${c.user.first_name} ${c.user.last_name}`.trim() : `Utilisateur #${c.user_id}`,
+          user_nom:       c.user ? `${c.user.first_name} ${c.user.last_name}`.trim() : `#${c.user_id}`,
           position_titre: c.position?.title ?? 'Poste inconnu',
-          position_id: c.position_id,
-          photo_url: candidatePhotoUrl(c.photo_url || c.photo_path),
-        }));
-        setCandidatures(data);
+          photo_url:      candidatePhotoUrl(c.photo_url || c.photo_path),
+        })));
       }
-    } catch (error) {
-      console.error('Erreur chargement candidatures', error);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    fetchCandidatures();
-  }, []);
+  useEffect(() => { load(); }, []);
 
   const handleAction = async (id, action) => {
-    setProcessing(prev => ({ ...prev, [id]: true }));
+    setProcessing((p) => ({ ...p, [id]: true }));
     try {
       await api.put(`/candidates/${id}/${action}`);
-      // Retirer de la liste locale ou recharger
-      setCandidatures(prev => prev.filter(c => c.id !== id));
+      setCandidatures((p) => p.filter((c) => c.id !== id));
       toast.success(action === 'approve' ? 'Candidature approuvée.' : 'Candidature refusée.');
-    } catch (error) {
-      console.error('Erreur action candidature', error);
-      toast.error(error.response?.data?.message || 'Erreur lors du traitement de la demande.');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Erreur lors du traitement.');
     } finally {
-      setProcessing(prev => ({ ...prev, [id]: false }));
+      setProcessing((p) => ({ ...p, [id]: false }));
     }
   };
 
-  const filtered = candidatures.filter(c =>
-    c.user_nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.position_titre.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = candidatures.filter((c) => {
+    const q = search.toLowerCase();
+    return c.user_nom.toLowerCase().includes(q) || c.position_titre.toLowerCase().includes(q);
+  });
 
   return (
-    <AdminLayout activePage="candidatures">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-2xl font-black text-slate-900">Candidatures en attente</h1>
-          <p className="text-slate-400 text-sm font-medium mt-1">
-            Examinez les demandes de candidature et validez ou refusez-les
+    <AdminLayout>
+      <div className="mx-auto max-w-6xl space-y-5">
+
+        {/* Header */}
+        <div className="animate-fade-up">
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-black text-slate-900">Candidatures en attente</h1>
+            {candidatures.length > 0 && (
+              <span className="badge badge-amber">{candidatures.length} en attente</span>
+            )}
+          </div>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Examinez et validez les demandes de candidature
           </p>
         </div>
 
-        {/* Barre de recherche */}
-        <div className="bg-white p-4 rounded-[28px] border border-slate-100 mb-6 flex items-center shadow-sm">
-          <Search className="text-slate-400 mr-3" size={18} />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Rechercher par nom ou poste..."
-            className="flex-1 p-2 bg-transparent border-none outline-none text-sm font-medium text-slate-700 placeholder:text-slate-400"
-          />
+        {/* Search */}
+        <div className="relative animate-fade-up delay-50">
+          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher par nom ou poste…"
+            className="search-input w-full max-w-sm pl-10" />
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="animate-spin text-emerald-500" size={40} />
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="bg-white rounded-[32px] border border-slate-100 p-12 text-center text-slate-400 font-medium text-sm">
-            {searchTerm ? 'Aucune candidature trouvée.' : 'Aucune candidature en attente.'}
-          </div>
-        ) : (
-          <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
+        {/* Table */}
+        <div className="content-card animate-fade-up delay-100">
+          {loading ? (
+            <Loading text="Chargement des candidatures…" className="py-16" />
+          ) : filtered.length === 0 ? (
+            <EmptyState icon={MailOpen}
+              title={search ? 'Aucune candidature trouvée.' : 'Aucune candidature en attente.'}
+              description={search ? 'Modifiez votre recherche.' : 'Toutes les demandes ont été traitées.'} />
+          ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-slate-50/50 border-b border-slate-50">
+              <table className="data-table">
+                <thead>
                   <tr>
-                    <th className="px-6 py-5 text-[10px] font-black text-slate-400">Photo</th>
-                    <th className="px-6 py-5 text-[10px] font-black text-slate-400">Postulant</th>
-                    <th className="px-6 py-5 text-[10px] font-black text-slate-400">Poste visé</th>
-                    <th className="px-6 py-5 text-[10px] font-black text-slate-400">Slogan / Bio</th>
-                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 text-right">Actions</th>
+                    <th>Postulant</th>
+                    <th>Poste visé</th>
+                    <th>Slogan / Bio</th>
+                    <th className="text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {filtered.map((cand) => (
-                    <tr key={cand.id} className="hover:bg-slate-50/80 transition-all group">
-                      <td className="px-6 py-4">
-                        <div className="w-11 h-11 rounded-2xl overflow-hidden bg-slate-200 border border-slate-200">
-                          {cand.photo_url ? (
-                            <img src={cand.photo_url} alt={cand.user_nom} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-slate-400">
-                              <User size={18} />
-                            </div>
-                          )}
+                <tbody>
+                  {filtered.map((c) => (
+                    <tr key={c.id}>
+                      {/* Postulant */}
+                      <td>
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg
+                            border border-slate-200 bg-slate-100">
+                            {c.photo_url
+                              ? <img src={c.photo_url} alt={c.user_nom} className="h-full w-full object-cover" />
+                              : <div className="flex h-full w-full items-center justify-center">
+                                  <User size={14} className="text-slate-400" />
+                                </div>
+                            }
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-slate-800">{c.user_nom}</p>
+                            <p className="text-[10px] text-slate-400">{c.user?.email}</p>
+                          </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <p className="font-bold text-sm text-slate-800">{cand.user_nom}</p>
-                        <p className="text-[11px] text-slate-400">{cand.user?.email}</p>
+
+                      {/* Poste */}
+                      <td>
+                        <p className="text-sm font-semibold text-slate-700">{c.position_titre}</p>
                       </td>
-                      <td className="px-6 py-4">
-                        <p className="font-bold text-sm text-slate-800">{cand.position_titre}</p>
+
+                      {/* Slogan */}
+                      <td>
+                        <p className="max-w-xs truncate text-xs text-slate-500">
+                          {c.slogan || c.bio || 'Non renseigné'}
+                        </p>
                       </td>
-                      <td className="px-6 py-4 max-w-xs">
-                        <p className="text-xs text-slate-600  truncate">{cand.slogan || cand.bio || 'Non renseigné'}</p>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2">
+
+                      {/* Actions */}
+                      <td>
+                        <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => handleAction(cand.id, 'approve')}
-                            disabled={processing[cand.id]}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-600 hover:bg-emerald-100 rounded-xl font-black text-[10px] transition-all disabled:opacity-50"
+                            onClick={() => handleAction(c.id, 'approve')}
+                            disabled={processing[c.id]}
+                            className="flex items-center gap-1.5 rounded-lg border border-emerald-200
+                              bg-emerald-50 px-3 py-1.5 text-[11px] font-bold text-emerald-700
+                              transition hover:bg-emerald-100 disabled:opacity-50"
                           >
-                            <CheckCircle2 size={14} />
-                            Accepter
+                            <CheckCircle2 size={13} />Accepter
                           </button>
                           <button
-                            onClick={() => handleAction(cand.id, 'reject')}
-                            disabled={processing[cand.id]}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 rounded-xl font-black text-[10px] transition-all disabled:opacity-50"
+                            onClick={() => handleAction(c.id, 'reject')}
+                            disabled={processing[c.id]}
+                            className="flex items-center gap-1.5 rounded-lg border border-red-200
+                              bg-red-50 px-3 py-1.5 text-[11px] font-bold text-red-600
+                              transition hover:bg-red-100 disabled:opacity-50"
                           >
-                            <XCircle size={14} />
-                            Refuser
+                            <XCircle size={13} />Refuser
                           </button>
                         </div>
                       </td>
@@ -148,11 +154,9 @@ const AdminCandidatures = () => {
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </AdminLayout>
   );
-};
-
-export default AdminCandidatures;
+}

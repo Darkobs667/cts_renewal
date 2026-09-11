@@ -4,24 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Vote extends Model
 {
-    use HasFactory, Notifiable;
+    use HasFactory;
 
-    /**
-     * Les champs autorisés pour l'assignation de masse.
-     */
     protected $fillable = [
         'position_id',
         'candidate_id',
         'hash_session',
     ];
 
-    /**
-     * Cast des attributs.
-     */
     protected function casts(): array
     {
         return [
@@ -30,24 +24,18 @@ class Vote extends Model
         ];
     }
 
-    /**
-     * L'électeur qui a voté (si suivi par user_id, mais ici absent – on garde la relation au cas où).
-     */
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
+    // ─── Relations ────────────────────────────────────────────────────────────
 
     /**
-     * Le candidat pour lequel le vote a été exprimé.
+     * Le candidat pour lequel le vote a été exprimé (nullable = vote blanc).
      */
-    public function candidate()
+    public function candidate(): BelongsTo
     {
         return $this->belongsTo(Candidate::class);
     }
 
-    public function position()
-{
-    return $this->belongsTo(Position::class);
-}
+    public function position(): BelongsTo
+    {
+        return $this->belongsTo(Position::class);
+    }
 }

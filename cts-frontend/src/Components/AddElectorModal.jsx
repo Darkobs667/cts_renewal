@@ -1,88 +1,117 @@
-import React, { useState } from 'react';
-import { UserPlus, Mail, Fingerprint, CheckCircle2 } from 'lucide-react';
+import { useState } from 'react';
+import { UserPlus, Mail, Lock, User } from 'lucide-react';
 import Modal from './Modal';
+import { electeurService } from '../services/electeurService';
+import toast from 'react-hot-toast';
 
-const AddElectorModal = ({ close, onAdd }) => {
-  const [formData, setFormData] = useState({
-    nom: '',
-    email: '',
-    identifiant: `CTS-2026-${Math.floor(Math.random() * 900) + 100}`, // Génération auto d'un ID par défaut
-    status: 'Validé'
+/**
+ * Formulaire d'inscription d'un nouvel électeur via POST /register.
+ * Correction : appel API réel (plus de id: Date.now() côté client).
+ */
+export default function AddElectorModal({ close, onAdd }) {
+  const [form, setForm]     = useState({
+    first_name: '', last_name: '', email: '', password: '',
   });
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onAdd({ ...formData, id: Date.now() });
-    close();
+    setError('');
+    if (form.password.length < 12) {
+      setError('Le mot de passe doit contenir au moins 12 caractères.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await electeurService.create({
+        first_name:            form.first_name,
+        last_name:             form.last_name,
+        email:                 form.email,
+        password:              form.password,
+        password_confirmation: form.password,
+        browserId:             '',
+      });
+      toast.success('Électeur inscrit avec succès.');
+      onAdd?.(res);
+      close();
+    } catch (err) {
+      const msg =
+        err?.response?.data?.errors
+          ? Object.values(err.response.data.errors).flat().join(' ')
+          : err?.response?.data?.message || 'Impossible d\'inscrire cet électeur.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <Modal isOpen onClose={close} title="Inscrire un électeur" subtitle="Ajout manuel au registre" size="md">
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Champ Nom */}
-          <div className="space-y-2">
-            <label className="modal-label">Nom complet</label>
+    <Modal isOpen onClose={close} title="Inscrire un électeur" subtitle="Création manuelle d'un compte électeur" size="md">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3
+            text-xs font-semibold text-red-700">
+            {error}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="modal-label">Prénom</label>
             <div className="relative">
-              <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600" size={18} />
-              <input 
-                required
-                className="modal-field pl-12"
-                placeholder="ex: Moussa Traoré"
-                value={formData.nom}
-                onChange={(e) => setFormData({...formData, nom: e.target.value})}
-              />
+              <User size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input required value={form.first_name}
+                onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                className="modal-field pl-9" placeholder="Alioune" />
             </div>
           </div>
-
-          {/* Champ Email */}
-          <div className="space-y-2">
-            <label className="modal-label">Adresse e-mail</label>
+          <div>
+            <label className="modal-label">Nom</label>
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600" size={18} />
-              <input 
-                required
-                type="email"
-                className="modal-field pl-12"
-                placeholder="m.traore@uadb.edu.sn"
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-              />
+              <User size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input required value={form.last_name}
+                onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                className="modal-field pl-9" placeholder="Diop" />
             </div>
           </div>
+        </div>
 
-          {/* Champ Identifiant (Lecture seule ou modifiable) */}
-          <div className="space-y-2">
-            <label className="modal-label">Identifiant unique</label>
-            <div className="relative">
-              <Fingerprint className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600" size={18} />
-              <input 
-                required
-                className="modal-field pl-12 font-mono text-emerald-200"
-                value={formData.identifiant}
-                onChange={(e) => setFormData({...formData, identifiant: e.target.value})}
-              />
-            </div>
+        <div>
+          <label className="modal-label">Email institutionnel</label>
+          <div className="relative">
+            <Mail size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input required type="email" value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              className="modal-field pl-9" placeholder="prenom.nom@uadb.edu.sn" />
           </div>
+        </div>
 
-          {/* Footer Actions */}
-          <div className="pt-4 flex gap-4">
-            <button 
-              type="button" 
-              onClick={close} 
-              className="modal-secondary-action flex-1"
-            >
-              Annuler
-            </button>
-            <button 
-              type="submit"
-              className="modal-primary-action flex-1 flex items-center justify-center gap-2"
-            >
-              <CheckCircle2 size={18} /> Valider
-            </button>
+        <div>
+          <label className="modal-label">Mot de passe provisoire</label>
+          <div className="relative">
+            <Lock size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input required type="password" value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              className="modal-field pl-9" placeholder="12 caractères minimum"
+              autoComplete="new-password" />
           </div>
-        </form>
+          <p className="mt-1 text-[10px] text-slate-400">
+            L'électeur devra changer ce mot de passe à sa première connexion.
+          </p>
+        </div>
+
+        <div className="flex gap-3 border-t border-slate-100 pt-4">
+          <button type="button" onClick={close} className="modal-secondary-action flex-1">
+            Annuler
+          </button>
+          <button type="submit" disabled={loading}
+            className="modal-primary-action flex-1 flex items-center justify-center gap-2">
+            <UserPlus size={15} />
+            {loading ? 'Inscription…' : 'Inscrire'}
+          </button>
+        </div>
+      </form>
     </Modal>
   );
-};
-
-export default AddElectorModal;
+}
