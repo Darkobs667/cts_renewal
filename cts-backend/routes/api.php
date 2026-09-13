@@ -36,8 +36,8 @@ Route::match(['GET', 'HEAD'], '/keep-alive', fn () => response('OK', 200)
 
 // ── Publiques ─────────────────────────────────────────────────────────────────
 
-Route::get('/votes/results/all', [VoteController::class, 'allResults']);
-Route::get('/votes/results/pdf', [VoteController::class, 'exportPDF']);
+Route::get('/votes/results/all', [VoteController::class, 'allResults'])->middleware('throttle:results');
+Route::get('/votes/results/pdf', [VoteController::class, 'exportPDF'])->middleware('throttle:pdf-export');
 
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register');
 Route::post('/login',    [AuthController::class, 'login'])->middleware('throttle:login');

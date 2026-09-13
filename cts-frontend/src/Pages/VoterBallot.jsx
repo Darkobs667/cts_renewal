@@ -35,6 +35,9 @@ export default function VoterBallot() {
         const votedIds = new Set((votesRes.data || []).map((v) => v.position_id));
         const byPos = {};
         for (const c of (candRes.data?.data || [])) {
+          // Filtre défensif côté client : ne montrer que les candidats validés.
+          // La validation serveur dans batchStore bloque de toute façon les votes invalides.
+          if (c.status !== 'valide') continue;
           if (!byPos[c.position_id]) byPos[c.position_id] = [];
           byPos[c.position_id].push(normalise(c));
         }

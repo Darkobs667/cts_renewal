@@ -31,23 +31,6 @@ class AdminController extends Controller
         ]);
     }
 
-    /**
-     * Force le recalcul des statistiques en vidant le cache, puis les retourne.
-     * Correction #14 : participation calculée correctement (était figée à 0).
-     */
-    public function refreshStats(): JsonResponse
-    {
-        $this->forgetCache('admin_global_stats');
-
-        $stats = $this->computeStats();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Cache des statistiques rafraîchi',
-            'data'    => $stats,
-        ]);
-    }
-
     // ─── Private ──────────────────────────────────────────────────────────────
 
     private function computeStats(): array

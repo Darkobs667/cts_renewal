@@ -38,5 +38,9 @@ class AppServiceProvider extends ServiceProvider
             ->by((string) optional($request->user('api'))->id ?: $request->ip()));
         RateLimiter::for('admin-write', fn (Request $request) => Limit::perMinute(30)
             ->by((string) optional($request->user('api'))->id ?: $request->ip()));
+
+        // Routes publiques potentiellement coûteuses — limitées par IP.
+        RateLimiter::for('results', fn (Request $request) => Limit::perMinute(30)->by($request->ip()));
+        RateLimiter::for('pdf-export', fn (Request $request) => Limit::perMinute(5)->by($request->ip()));
     }
 }

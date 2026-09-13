@@ -51,17 +51,21 @@ class UserController extends Controller
 
     /**
      * Réinitialiser le mot de passe d'un utilisateur (admin seulement).
+     * Le nouveau mot de passe temporaire est généré côté serveur.
+     * Il N'EST PAS retourné dans la réponse JSON pour éviter toute exposition.
+     * L'administrateur doit le transmettre à l'utilisateur par un canal sécurisé hors-bande.
      */
     public function resetPassword(Request $request, int $id): JsonResponse
     {
         $user = User::findOrFail($id);
-        $newPassword = Str::random(12);
+        $newPassword = Str::random(16);
         $user->password = Hash::make($newPassword);
         $user->save();
 
+        // ⚠️  Le mot de passe n'est JAMAIS renvoyé dans la réponse.
+        // Transmettez-le à l'utilisateur par email ou canal sécurisé.
         return response()->json([
-            'message'      => 'Mot de passe réinitialisé avec succès.',
-            'new_password' => $newPassword,
+            'message' => 'Mot de passe réinitialisé. Communiquez le nouveau mot de passe à l\'utilisateur par un canal sécurisé.',
         ]);
     }
 

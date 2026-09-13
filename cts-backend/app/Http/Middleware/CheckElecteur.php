@@ -11,6 +11,7 @@ class CheckElecteur
     /**
      * Restrict voter-only endpoints using the authenticated JWT user.
      * Never rely on a role submitted by the client.
+     * Also checks that the voter account is active (status = 'Validé').
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -19,6 +20,12 @@ class CheckElecteur
         if (!$user || $user->role !== 'electeur') {
             return response()->json([
                 'error' => 'Accès réservé aux électeurs.',
+            ], 403);
+        }
+
+        if ($user->status !== 'Validé') {
+            return response()->json([
+                'error' => 'Votre compte est suspendu. Contactez l\'administration.',
             ], 403);
         }
 

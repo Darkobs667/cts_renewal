@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -56,10 +55,16 @@ class User extends Authenticatable implements JWTSubject
     /**
      * Calcule le hash_session utilisé dans la table votes.
      * Centralisé ici pour éviter toute divergence entre services.
+     *
+     * Utilise VOTE_HASH_KEY (config('vote.hash_key')) — indépendante de APP_KEY.
+     * Ainsi, une rotation de APP_KEY n'invalide pas les votes existants.
+     * Fallback sur APP_KEY uniquement si VOTE_HASH_KEY n'est pas configurée
+     * (rétro-compatibilité avec les votes existants en base).
      */
     public function voteHash(): string
     {
-        return hash_hmac('sha256', (string) $this->id, config('app.key'));
+        $key = config('vote.hash_key') ?: config('app.key');
+        return hash_hmac('sha256', (string) $this->id, $key);
     }
 
     // ─── Relations ────────────────────────────────────────────────────────────
@@ -69,9 +74,16 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasOne(Candidate::class);
     }
 
-    public function votes(): HasMany
+    /**
+     * Retourne les votes de l'utilisateur via son hash HMAC.
+     * NOTE : la table `votes` ne stocke pas `user_id` mais `hash_session` (hash HMAC de l'id).
+     * Eloquent ne peut pas résoudre cette relation directement avec hasMany.
+     * Utilisez Vote::where('hash_session', $user->voteHash()) à la place.
+     *
+     * @deprecated Utilisez $user->getVotes() ou Vote::where('hash_session', $user->voteHash())
+     */
+    public function getVotes(): \Illuminate\Database\Eloquent\Collection
     {
-        return $this->hasMany(Vote::class, 'hash_session', 'id');
-        // NOTE : Vote ne stocke pas user_id ; utiliser Vote::where('hash_session', $user->voteHash())
+        return \App\Models\Vote::where('hash_session', $this->voteHash())->get();
     }
 }

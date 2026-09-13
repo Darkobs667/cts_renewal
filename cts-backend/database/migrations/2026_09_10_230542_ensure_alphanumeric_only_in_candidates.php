@@ -37,10 +37,28 @@ return new class extends Migration
 
         // Nullifier les photo_public_id qui contiendraient des caractères non-alphanumériques
         // autres que les séparateurs courants Cloudinary (/, -, _).
-        DB::table('candidates')
-            ->whereNotNull('photo_public_id')
-            ->whereRaw("photo_public_id REGEXP '[^a-zA-Z0-9/_-]'")
-            ->update(['photo_public_id' => null]);
+        // NOTE : REGEXP n'est pas disponible nativement en SQLite (dev) ; on filtre en mémoire.
+        $driver = DB::getDriverName();
+        if ($driver === 'pgsql' || $driver === 'mysql') {
+            $regexpOp = $driver === 'pgsql' ? '~' : 'REGEXP';
+            $pattern  = $driver === 'pgsql' ? '[^a-zA-Z0-9/_-]' : '[^a-zA-Z0-9/_-]';
+            DB::table('candidates')
+                ->whereNotNull('photo_public_id')
+                ->whereRaw("photo_public_id {$regexpOp} ?", [$pattern])
+                ->update(['photo_public_id' => null]);
+        } else {
+            // SQLite (dev local) : filtrage en mémoire via PHP.
+            DB::table('candidates')
+                ->whereNotNull('photo_public_id')
+                ->get(['id', 'photo_public_id'])
+                ->each(function ($row) {
+                    if (!preg_match('/^[a-zA-Z0-9\/_-]+$/', (string) $row->photo_public_id)) {
+                        DB::table('candidates')
+                            ->where('id', $row->id)
+                            ->update(['photo_public_id' => null]);
+                    }
+                });
+        }
     }
 
     public function down(): void
