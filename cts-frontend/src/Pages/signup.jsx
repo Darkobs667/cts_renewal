@@ -130,10 +130,6 @@ export default function SignUp() {
             Cyber Tech <span style={{ color: '#059669' }}>Squad</span>
           </span>
         </div>
-          <span className="auth-mobile-logo-text">
-            Cyber Tech <span className="text-emerald-600">Squad</span>
-          </span>
-        </div>
 
         {/* Mobile hero */}
         <div className="auth-mobile-hero">
