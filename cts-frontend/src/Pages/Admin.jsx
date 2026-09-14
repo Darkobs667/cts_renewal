@@ -51,8 +51,6 @@ function ElectionRow({ election }) {
   );
 }
 
-      <Link
-        to="/votes-elections"
 /* ── Main ── */
 export default function Dashboard() {
   const [stats, setStats] = useState({
