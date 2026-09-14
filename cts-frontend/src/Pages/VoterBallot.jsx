@@ -13,6 +13,8 @@ function normalise(c) {
     name:    `${c.user?.first_name ?? ''} ${c.user?.last_name ?? ''}`.trim() || 'Candidat',
     slogan:  c.slogan || c.bio || 'Aucune profession de foi.',
     initial: (c.user?.first_name?.[0] ?? 'C').toUpperCase(),
+    // photo_url vient du backend (Cloudinary URL) ou photo_path en fallback
+    photo:   c.photo_url || c.photo_path || null,
   };
 }
 
@@ -131,11 +133,21 @@ export default function VoterBallot() {
                           ? 'border-emerald-500 bg-emerald-50 shadow-sm'
                           : 'border-slate-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/40'
                       }`}>
+                      {/* Avatar : photo Cloudinary si disponible, sinon initiale */}
                       <div className={`flex h-10 w-10 shrink-0 items-center justify-center
-                        rounded-xl text-sm font-black select-none ${
-                        isSel ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                        rounded-xl overflow-hidden text-sm font-black select-none ${
+                        !c.photo ? (isSel ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500') : ''
                       }`}>
-                        {c.initial}
+                        {c.photo
+                          ? <img src={c.photo} alt={c.name}
+                              className="h-full w-full object-cover"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
+                            />
+                          : null
+                        }
+                        <span className={`${c.photo ? 'hidden' : 'flex'} h-full w-full items-center justify-center`}>
+                          {c.initial}
+                        </span>
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-slate-900">{c.name}</p>

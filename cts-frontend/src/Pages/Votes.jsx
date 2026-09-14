@@ -16,51 +16,50 @@ function ElectionCard({ election, onEdit, onDelete, onToggle }) {
   const active = election.is_active == 1;
 
   return (
-    <div className="group relative flex flex-col gap-4 rounded-xl border border-slate-200
-      bg-white p-5 shadow-sm transition-all duration-150
-      hover:border-slate-300 hover:shadow-md sm:flex-row sm:items-center">
+    <div className={`election-card ${active ? 'election-card-active' : ''}`}>
 
-      {/* Left accent bar */}
-      {active && (
-        <span className="absolute left-0 top-4 bottom-4 w-0.5 rounded-r-full bg-emerald-500" />
-      )}
-
-      {/* Icon */}
-      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-        active ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'
-      }`}>
-        <Vote size={18} strokeWidth={2} />
-      </div>
-
-      {/* Info */}
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-sm font-bold text-slate-900">{election.title}</h3>
-          <span className={`badge ${active ? 'badge-green' : 'badge-slate'}`}>
-            {active ? (
-              <><span className="status-dot-live" />En ligne</>
-            ) : 'Inactif'}
-          </span>
+      {/* Header */}
+      <div className="election-card-header">
+        {/* Icon */}
+        <div className={`election-card-icon ${active ? 'election-card-icon-active' : 'election-card-icon-inactive'}`}>
+          <Vote size={17} strokeWidth={2} />
         </div>
-        {election.description ? (
-          <p className="mt-1 line-clamp-1 text-xs text-slate-500">{election.description}</p>
-        ) : (
-          <p className="mt-1 text-xs italic text-slate-400">Aucune description.</p>
-        )}
+
+        {/* Info */}
+        <div className="election-card-body">
+          <div className="flex flex-wrap items-center gap-2 mb-0.5">
+            <h3 className="text-sm font-bold text-slate-900 leading-tight">{election.title}</h3>
+          </div>
+          {election.description ? (
+            <p className="text-[11px] text-slate-400 line-clamp-1">{election.description}</p>
+          ) : (
+            <p className="text-[11px] italic text-slate-300">Aucune description</p>
+          )}
+        </div>
+
+        {/* Status badge */}
+        <span className={`badge shrink-0 ${active ? 'badge-green' : 'badge-slate'}`}>
+          {active ? (
+            <><span className="status-dot-live" />En ligne</>
+          ) : 'Inactif'}
+        </span>
       </div>
 
-      {/* Actions */}
-      <div className="flex shrink-0 items-center gap-1">
-        <button onClick={() => onEdit(election)} className="action-btn-edit" title="Modifier">
-          <Edit3 size={15} />
-        </button>
-        <button onClick={() => onDelete(election.id)} className="action-btn-delete" title="Supprimer">
-          <Trash2 size={15} />
-        </button>
+      {/* Footer actions */}
+      <div className="election-card-footer">
+        <div className="flex items-center gap-1">
+          <button onClick={() => onEdit(election)} className="action-btn-edit" title="Modifier">
+            <Edit3 size={14} />
+          </button>
+          <button onClick={() => onDelete(election.id)} className="action-btn-delete" title="Supprimer">
+            <Trash2 size={14} />
+          </button>
+        </div>
+
         <button
           onClick={() => onToggle(election)}
-          title={active ? 'Désactiver' : 'Activer'}
-          className={`ml-1 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px]
+          title={active ? 'Désactiver le scrutin' : 'Activer le scrutin'}
+          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px]
             font-bold transition-all active:scale-95 ${
             active
               ? 'bg-red-50 text-red-600 hover:bg-red-100'
@@ -197,7 +196,7 @@ export default function Votes() {
                 {elections.length}
               </span>
             </div>
-            <div className="space-y-2 p-4">
+            <div className="grid gap-3 p-4 sm:grid-cols-2">
               {elections.map((el) => (
                 <ElectionCard
                   key={el.id}

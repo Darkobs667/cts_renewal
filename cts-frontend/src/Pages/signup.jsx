@@ -121,13 +121,15 @@ export default function SignUp() {
       <div className="auth-panel-right">
         {/* Mobile logo */}
         <div className="auth-mobile-logo">
-          <div className="auth-mobile-logo-icon">
-            <img
-              src={logocts}
-              alt="CTS"
-              style={{ height: '1.125rem', width: '1.125rem', objectFit: 'contain' }}
-            />
-          </div>
+          <img
+            src={logocts}
+            alt="CTS"
+            style={{ height: '2rem', width: '2rem', objectFit: 'contain' }}
+          />
+          <span className="auth-mobile-logo-text">
+            Cyber Tech <span style={{ color: '#059669' }}>Squad</span>
+          </span>
+        </div>
           <span className="auth-mobile-logo-text">
             Cyber Tech <span className="text-emerald-600">Squad</span>
           </span>

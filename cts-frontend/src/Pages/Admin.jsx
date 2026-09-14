@@ -11,46 +11,48 @@ import EmptyState from '../Components/EmptyState';
 import adminService from '../services/adminService';
 import api from '../services/api';
 
-/* ── Election row ── */
+/* ── Election row (dashboard admin) ── */
 function ElectionRow({ election }) {
   const active = election.is_active == 1 || election.statut === 'Actif';
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-slate-100
-      bg-slate-50/60 px-4 py-3 transition hover:border-slate-200 hover:bg-white">
-      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-        active ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'
-      }`}>
-        <Vote size={16} strokeWidth={2} />
+    <div className={`election-card ${active ? 'election-card-active' : ''}`}>
+      <div className="election-card-header">
+        <div className={`election-card-icon ${active ? 'election-card-icon-active' : 'election-card-icon-inactive'}`}>
+          <Vote size={16} strokeWidth={2} />
+        </div>
+        <div className="election-card-body">
+          <p className="truncate text-sm font-semibold text-slate-900 leading-tight">
+            {election.titre}
+          </p>
+          <p className="flex items-center gap-1 text-[10px] text-slate-400 mt-0.5">
+            <Calendar size={9} />
+            {new Date(election.date_fin).toLocaleDateString('fr-FR', {
+              day: 'numeric', month: 'short', year: 'numeric',
+            })}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={`badge ${active ? 'badge-green' : 'badge-slate'}`}>
+            {active ? <><span className="status-dot-live" />En ligne</> : 'Inactif'}
+          </span>
+          <Link
+            to="/votes-elections"
+            className="flex items-center gap-1 rounded-lg border border-slate-200
+              bg-slate-50 px-2.5 py-1.5 text-[10px] font-bold text-slate-500
+              hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700
+              transition-all group"
+          >
+            Voir
+            <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
+          </Link>
+        </div>
       </div>
-
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-slate-800">{election.titre}</p>
-        <p className="flex items-center gap-1 text-[11px] text-slate-400">
-          <Calendar size={10} />
-          {new Date(election.date_fin).toLocaleDateString('fr-FR', {
-            day: 'numeric', month: 'short', year: 'numeric',
-          })}
-        </p>
-      </div>
-
-      <span className={`badge ${active ? 'badge-green' : 'badge-slate'}`}>
-        {active ? (
-          <><span className="status-dot-live" />En ligne</>
-        ) : 'Inactif'}
-      </span>
-
-      <Link
-        to="/votes-elections"
-        className="flex items-center gap-1 text-[11px] font-semibold
-          text-emerald-600 hover:text-emerald-700 transition-colors group"
-      >
-        Voir
-        <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
-      </Link>
     </div>
   );
 }
 
+      <Link
+        to="/votes-elections"
 /* ── Main ── */
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -182,8 +184,7 @@ export default function Dashboard() {
                 />
               ) : (
                 elections.map((el) => <ElectionRow key={el.id} election={el} />)
-              )}
-            </div>
+              )}            </div>
           </div>
 
           {/* Pilotage rapide */}

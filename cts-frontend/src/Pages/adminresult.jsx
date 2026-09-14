@@ -160,7 +160,7 @@ function ElectionCard({ election, totalVoters, onClose }) {
       </div>
 
       {/* Card body */}
-      <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[1fr_200px]">
+      <div className="results-card-body">
         {/* Candidates list */}
         <div>
           <div className="mb-3 flex items-center gap-2">
@@ -182,7 +182,7 @@ function ElectionCard({ election, totalVoters, onClose }) {
         </div>
 
         {/* Participation sidebar */}
-        <aside className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <aside className="results-participation-aside">
           <p className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">
             Participation
           </p>
