@@ -17,6 +17,7 @@ const VoterHistory = lazy(() => import('./Pages/VoterHistory.jsx'));
 const AdminresultsPage = lazy(() => import('./Pages/adminresult.jsx'));
 const ElecteurScrutins = lazy(() => import('./Pages/ElecteurScrutins.jsx'));
 const AdminCandidatures = lazy(() => import('./Pages/AdminCandidatures.jsx'));
+const CandidatureForm = lazy(() => import('./Pages/CandidatureForm.jsx'));
 
 function AppContent() {
     return (
@@ -55,6 +56,11 @@ function AppContent() {
             <Route path="/scrutins" element={
                 <ProtectedRoute allowedRole="electeur">
                     <ElecteurScrutins />
+                </ProtectedRoute>
+            } />
+            <Route path="/candidature" element={
+                <ProtectedRoute allowedRole="electeur">
+                    <CandidatureForm />
                 </ProtectedRoute>
             } />
             

@@ -1,35 +1,66 @@
 import { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router';
-import { LayoutDashboard, Vote, CheckCircle2, LogOut, Menu, X } from 'lucide-react';
+import { Link, useNavigate } from 'react-router';
+import {
+  LayoutDashboard, Vote, CheckCircle2,
+  LogOut, X, FilePlus,
+} from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import Logocts from '../assets/logo-cts2-removebg-preview.png';
 
+/* ─── Menu items ───────────────────────────────────────────────────────────
+   Scrutins retiré de la nav (la page existe toujours mais n'est plus exposée
+   dans la navigation principale).
+   ───────────────────────────────────────────────────────────────────────── */
 const MENU = [
-  { id: 'dashboard', to: '/voterDashboard', label: 'Tableau de bord',   icon: LayoutDashboard },
-  { id: 'scrutins',  to: '/scrutins',       label: 'Postes disponibles', icon: Vote            },
-  { id: 'votes',     to: '/voterHistory',   label: 'Mes votes',          icon: CheckCircle2    },
+  { id: 'dashboard',   to: '/voterDashboard', label: 'Accueil',   icon: LayoutDashboard },
+  { id: 'candidature', to: '/candidature',    label: 'Postuler',  icon: FilePlus        },
+  { id: 'votes',       to: '/voterHistory',   label: 'Mes votes', icon: CheckCircle2    },
 ];
 
-function NavItem({ item, active }) {
+/* ── Sidebar nav item (desktop ≥ 768px) ── */
+function SideNavItem({ item, active }) {
   return (
     <Link
       to={item.to}
-      className={`relative mx-2 flex items-center gap-3 rounded-xl px-3 py-2.5
-        text-xs font-semibold transition-all duration-150 group ${
-        active
-          ? 'bg-emerald-50 text-emerald-700'
-          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-      }`}
+      style={{
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.75rem',
+        margin: '0.125rem 0.5rem',
+        borderRadius: '0.75rem',
+        padding: '0.625rem 0.875rem',
+        fontSize: '0.8125rem',
+        fontWeight: 600,
+        textDecoration: 'none',
+        color: active ? '#15803d' : '#64748b',
+        background: active ? '#f0fdf4' : 'transparent',
+        transition: 'all 140ms',
+      }}
     >
       {active && (
-        <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-r-full bg-emerald-500" />
+        <span style={{
+          position: 'absolute',
+          left: 0,
+          top: '6px',
+          bottom: '6px',
+          width: '3px',
+          borderRadius: '0 3px 3px 0',
+          background: '#16a34a',
+        }} />
       )}
-      <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg
-        transition-colors ${
-        active
-          ? 'bg-emerald-100 text-emerald-600'
-          : 'text-slate-400 group-hover:bg-slate-100 group-hover:text-slate-600'
-      }`}>
+      <span style={{
+        display: 'flex',
+        height: '1.875rem',
+        width: '1.875rem',
+        flexShrink: 0,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: '0.5rem',
+        background: active ? '#dcfce7' : '#f1f5f9',
+        color: active ? '#16a34a' : '#94a3b8',
+        transition: 'all 140ms',
+      }}>
         <item.icon size={14} strokeWidth={2} />
       </span>
       {item.label}
@@ -37,16 +68,58 @@ function NavItem({ item, active }) {
   );
 }
 
+/* ── Bottom nav item (mobile < 768px) ── */
+function BottomNavItem({ item, active }) {
+  return (
+    <Link
+      to={item.to}
+      style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '3px',
+        padding: '0.5rem 0 0.375rem',
+        textDecoration: 'none',
+        color: active ? '#16a34a' : '#94a3b8',
+        transition: 'color 140ms',
+        minWidth: 0,
+      }}
+    >
+      <span style={{
+        display: 'flex',
+        height: '2.125rem',
+        width: '2.125rem',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: '0.75rem',
+        background: active ? '#f0fdf4' : 'transparent',
+        transition: 'background 140ms',
+      }}>
+        <item.icon size={20} strokeWidth={active ? 2.5 : 1.75} />
+      </span>
+      <span style={{
+        fontSize: '0.5625rem',
+        fontWeight: 700,
+        letterSpacing: '0.02em',
+        color: active ? '#16a34a' : '#94a3b8',
+        lineHeight: 1,
+      }}>
+        {item.label}
+      </span>
+    </Link>
+  );
+}
+
+/* ── Main layout ── */
 export default function VoterLayout({ children, activePage }) {
-  const location  = useLocation();
   const navigate  = useNavigate();
-  const { user, logout, loading } = useAuth();
-  const [open, setOpen]           = useState(false);
+  const { user, logout } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = async () => {
     setLoggingOut(true);
-    setOpen(false);
     await logout();
     navigate('/login', { replace: true });
   };
@@ -54,127 +127,222 @@ export default function VoterLayout({ children, activePage }) {
   const initials = user
     ? `${user.first_name?.[0] ?? ''}${user.last_name?.[0] ?? ''}`.toUpperCase()
     : '?';
-  const fullName = user ? `${user.first_name} ${user.last_name}` : 'Électeur';
-
-  if (loading) return null;
+  const fullName = user
+    ? `${user.first_name} ${user.last_name}`
+    : 'Électeur';
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900">
-      {/* Mobile backdrop */}
-      {open && (
-        <div
-          className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-sm md:hidden"
-          onClick={() => setOpen(false)}
-        />
-      )}
+    <div className="voter-layout-root">
 
-      {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 flex w-60 flex-col border-r
-        border-slate-100 bg-white transition-transform duration-300
-        md:static md:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
-      >
+      {/* ══════════════════════════════════════════
+          SIDEBAR — visible desktop (≥768px) via CSS
+          Cachée mobile : la bottom nav suffit
+          ══════════════════════════════════════════ */}
+      <aside className="voter-sidebar">
+
         {/* Logo */}
-        <div className="flex h-16 items-center justify-between border-b border-slate-100 px-5">
-          <div className="flex items-center gap-2.5">
-            <img src={Logocts} alt="CTS" className="h-8 w-8 object-contain mix-blend-multiply" />
-            <div className="leading-none">
-              <span className="block text-[8px] font-black uppercase tracking-widest text-slate-400">
-                Cyber Tech
-              </span>
-              <span className="block text-xs font-black uppercase text-emerald-600">
-                Squad
-              </span>
-            </div>
+        <div className="voter-sidebar-logo">
+          <div className="voter-sidebar-logo-icon">
+            <img
+              src={Logocts}
+              alt="CTS"
+              style={{ height: '1.5rem', width: '1.5rem', objectFit: 'contain' }}
+            />
           </div>
-          <button
-            onClick={() => setOpen(false)}
-            className="md:hidden flex h-7 w-7 items-center justify-center rounded-lg
-              text-slate-400 hover:bg-slate-100 transition-colors"
-          >
-            <X size={16} />
-          </button>
+          <div style={{ lineHeight: 1.25 }}>
+            <span style={{
+              display: 'block',
+              fontSize: '0.5625rem',
+              fontWeight: 900,
+              textTransform: 'uppercase',
+              letterSpacing: '0.18em',
+              color: '#94a3b8',
+            }}>
+              Cyber Tech
+            </span>
+            <span style={{
+              display: 'block',
+              fontSize: '0.875rem',
+              fontWeight: 900,
+              textTransform: 'uppercase',
+              color: '#16a34a',
+              lineHeight: 1,
+            }}>
+              Squad
+            </span>
+          </div>
         </div>
 
-        <div className="px-5 pt-5 pb-2">
-          <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
-            Menu
-          </p>
-        </div>
+        {/* Nav label */}
+        <p className="voter-sidebar-section-label">Navigation</p>
 
-        <nav className="flex-1 space-y-0.5 overflow-y-auto pb-4">
+        {/* Nav links */}
+        <nav className="voter-sidebar-nav">
           {MENU.map((item) => (
-            <NavItem
+            <SideNavItem
               key={item.id}
               item={item}
-              active={activePage === item.id || location.pathname === item.to}
+              active={activePage === item.id}
             />
           ))}
         </nav>
 
         {/* User + logout */}
-        <div className="border-t border-slate-100 p-3 space-y-2">
-          <div className="flex items-center gap-2.5 rounded-xl bg-slate-50 px-3 py-2.5">
-            <div className="avatar-initials h-8 w-8 text-[11px] shrink-0">{initials}</div>
-            <div className="min-w-0">
-              <p className="truncate text-xs font-bold text-slate-800">{fullName}</p>
-              <p className="text-[9px] font-semibold text-emerald-600">Électeur</p>
+        <div className="voter-sidebar-user">
+          <div className="voter-sidebar-user-card">
+            <div className="voter-avatar">{initials}</div>
+            <div style={{ minWidth: 0 }}>
+              <p style={{
+                fontSize: '0.8125rem',
+                fontWeight: 700,
+                color: '#0f172a',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                lineHeight: 1.2,
+              }}>
+                {fullName}
+              </p>
+              <p style={{
+                fontSize: '0.625rem',
+                fontWeight: 600,
+                color: '#16a34a',
+                marginTop: '2px',
+              }}>
+                Électeur
+              </p>
             </div>
           </div>
+
           <button
             onClick={handleLogout}
             disabled={loggingOut}
-            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs
-              font-semibold text-slate-500 transition-all
-              hover:bg-red-50 hover:text-red-600 active:scale-[0.98]
-              disabled:opacity-60 group"
+            className="voter-sidebar-logout"
           >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg
-              bg-slate-100 group-hover:bg-red-100 transition-colors">
+            <span className="voter-sidebar-logout-icon">
               <LogOut size={13} />
             </span>
-            {loggingOut ? 'Déconnexion…' : 'Déconnexion'}
+            {loggingOut ? 'Déconnexion…' : 'Se déconnecter'}
           </button>
         </div>
       </aside>
 
-      {/* Main */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Topbar */}
-        <header className="flex h-16 shrink-0 items-center justify-between border-b
-          border-slate-100 bg-white px-5">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setOpen(true)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg
-                text-slate-500 hover:bg-slate-100 transition md:hidden"
-            >
-              <Menu size={18} />
-            </button>
-            {/* Live badge */}
-            <div className="hidden items-center gap-2 rounded-lg border border-slate-200
-              bg-slate-50 px-3 py-1.5 md:flex">
-              <span className="status-dot-live" />
-              <span className="text-[10px] font-semibold text-slate-500 tracking-wide">
-                Session sécurisée
-              </span>
-            </div>
+      {/* ══════════════════════════════════════════
+          MAIN CONTENT
+          ══════════════════════════════════════════ */}
+      <div className="voter-main">
+
+        {/* Topbar — épurée sur mobile : juste logo + user chip */}
+        <header className="voter-topbar">
+
+          {/* Logo — visible sur mobile uniquement (sidebar cachée) */}
+          <div className="voter-topbar-logo-mobile">
+            <img
+              src={Logocts}
+              alt="CTS"
+              style={{ height: '1.875rem', width: '1.875rem', objectFit: 'contain' }}
+            />
+            <span style={{
+              fontSize: '1rem',
+              fontWeight: 900,
+              color: '#16a34a',
+              letterSpacing: '-0.01em',
+            }}>
+              CTS Vote
+            </span>
           </div>
 
-          {/* User chip */}
-          <div className="flex items-center gap-2.5 rounded-lg border border-slate-200
-            bg-slate-50 px-3 py-1.5">
-            <div className="avatar-initials h-6 w-6 text-[10px]">{initials}</div>
-            <div className="hidden sm:block">
-              <p className="text-xs font-bold text-slate-800 leading-none">{fullName}</p>
-              <p className="mt-0.5 text-[9px] font-semibold text-emerald-600">Électeur</p>
+          {/* Badge session sécurisée — desktop uniquement */}
+          <div className="voter-topbar-session-badge">
+            <span className="status-dot-live" />
+            Session sécurisée
+          </div>
+
+          {/* User chip — toujours visible */}
+          <div className="voter-topbar-user">
+            <div className="voter-avatar voter-avatar-sm">{initials}</div>
+            <div className="voter-topbar-user-info">
+              <p style={{
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                color: '#0f172a',
+                lineHeight: 1,
+                whiteSpace: 'nowrap',
+              }}>
+                {fullName}
+              </p>
+              <p style={{
+                marginTop: '2px',
+                fontSize: '0.5625rem',
+                fontWeight: 700,
+                color: '#16a34a',
+              }}>
+                Électeur
+              </p>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-x-hidden overflow-y-auto p-5 md:p-7">
+        {/* Contenu de la page */}
+        <main className="voter-content">
           {children}
         </main>
       </div>
+
+      {/* ══════════════════════════════════════════
+          BOTTOM NAV — mobile < 768px uniquement
+          (masquée via CSS sur desktop)
+          ══════════════════════════════════════════ */}
+      <nav className="voter-bottom-nav">
+        {MENU.map((item) => (
+          <BottomNavItem
+            key={item.id}
+            item={item}
+            active={activePage === item.id}
+          />
+        ))}
+
+        {/* Bouton déconnexion */}
+        <button
+          onClick={handleLogout}
+          disabled={loggingOut}
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '3px',
+            padding: '0.5rem 0 0.375rem',
+            border: 'none',
+            background: 'transparent',
+            cursor: loggingOut ? 'not-allowed' : 'pointer',
+            color: '#94a3b8',
+            transition: 'color 140ms',
+            minWidth: 0,
+          }}
+        >
+          <span style={{
+            display: 'flex',
+            height: '2.125rem',
+            width: '2.125rem',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '0.75rem',
+          }}>
+            <LogOut size={20} strokeWidth={1.75} />
+          </span>
+          <span style={{
+            fontSize: '0.5625rem',
+            fontWeight: 700,
+            letterSpacing: '0.02em',
+            color: '#94a3b8',
+            lineHeight: 1,
+          }}>
+            {loggingOut ? '…' : 'Sortir'}
+          </span>
+        </button>
+      </nav>
     </div>
   );
 }

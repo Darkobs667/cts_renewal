@@ -1,12 +1,26 @@
 import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import Logocts from '../assets/logo-cts2-removebg-preview.png';
 
-const SIZES = { sm: 'max-w-md', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-3xl' };
+const SIZES = {
+  sm: 'max-w-md',
+  md: 'max-w-lg',
+  lg: 'max-w-2xl',
+  xl: 'max-w-3xl',
+};
 
-export default function Modal({ isOpen, onClose, title, subtitle, children, size = 'md' }) {
-  const panelRef = useRef(null);
-  const onCloseRef = useRef(onClose);
+export default function Modal({
+  isOpen,
+  onClose,
+  title,
+  subtitle,
+  children,
+  size = 'md',
+  icon,
+}) {
+  const panelRef    = useRef(null);
+  const onCloseRef  = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   useEffect(() => {
@@ -26,15 +40,21 @@ export default function Modal({ isOpen, onClose, title, subtitle, children, size
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-4"
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          transition={{ duration: 0.18 }}
+          className="fixed inset-0 z-[200] flex items-end justify-center overflow-y-auto
+            p-0 sm:items-center sm:p-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
         >
           {/* Backdrop */}
           <motion.button
             aria-label="Fermer"
-            className="absolute inset-0 cursor-default bg-slate-950/40 backdrop-blur-[2px]"
+            className="absolute inset-0 cursor-default bg-slate-950/50 backdrop-blur-[3px]"
             onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
           />
 
           {/* Panel */}
@@ -44,41 +64,44 @@ export default function Modal({ isOpen, onClose, title, subtitle, children, size
             aria-modal="true"
             aria-labelledby="modal-title"
             tabIndex={-1}
-            className={`relative z-10 my-auto w-full ${SIZES[size] ?? SIZES.md}
-              overflow-hidden rounded-2xl border border-slate-200/80 bg-white
-              shadow-2xl shadow-slate-950/20 outline-none`}
-            initial={{ opacity: 0, scale: 0.97, y: 12 }}
-            animate={{ opacity: 1, scale: 1,    y: 0 }}
-            exit={{   opacity: 0, scale: 0.97, y: 8  }}
-            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+            className={`modal-panel ${SIZES[size] ?? SIZES.md}`}
+            initial={{ opacity: 0, y: 40, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0,  scale: 1    }}
+            exit={{   opacity: 0, y: 20, scale: 0.98  }}
+            transition={{ type: 'spring', stiffness: 400, damping: 32, mass: 0.8 }}
           >
             {/* Header */}
-            <header className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
-              <div>
-                <p className="mb-1 text-[9px] font-black uppercase tracking-[0.18em] text-emerald-600">
-                  CTS · Espace sécurisé
-                </p>
-                <h2 id="modal-title" className="text-base font-black text-slate-900">
-                  {title}
-                </h2>
-                {subtitle && (
-                  <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>
+            <header className="modal-header">
+              <div className="flex items-center gap-3">
+                {/* Logo ou icône custom */}
+                {icon ? (
+                  <div className="modal-icon-wrapper">
+                    {icon}
+                  </div>
+                ) : (
+                  <div className="modal-logo-badge">
+                    <img src={Logocts} alt="CTS" className="h-4 w-4 object-contain mix-blend-multiply" />
+                  </div>
                 )}
+                <div>
+                  <p className="modal-eyebrow">CTS · Espace sécurisé</p>
+                  <h2 id="modal-title" className="modal-title">{title}</h2>
+                  {subtitle && <p className="modal-subtitle">{subtitle}</p>}
+                </div>
               </div>
+
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg
-                  border border-slate-200 bg-slate-50 text-slate-400
-                  transition hover:border-red-200 hover:bg-red-50 hover:text-red-500"
-                aria-label="Fermer"
+                className="modal-close-btn"
+                aria-label="Fermer la fenêtre"
               >
                 <X size={15} />
               </button>
             </header>
 
             {/* Body */}
-            <div className="max-h-[calc(100dvh-10rem)] overflow-y-auto px-6 py-5">
+            <div className="modal-body">
               {children}
             </div>
           </motion.section>
