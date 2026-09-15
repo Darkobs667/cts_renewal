@@ -1824,13 +1824,13 @@
 }
 
 /* ── Barre flottante bulletin de vote ───────────────────────────────────────
-   Sur mobile : remonte au-dessus de la bottom nav (≈ 64px)
+   Sur mobile : remonte au-dessus de la bottom nav (≈ 64px) + safe area iOS
    Sur desktop : position classique en bas
    ─────────────────────────────────────────────────────────────────────────── */
 .voter-ballot-floatbar {
   position: fixed;
-  /* Mobile : au-dessus de la bottom nav */
-  bottom: calc(64px + 0.75rem);
+  /* Mobile : au-dessus de la bottom nav + safe area iOS */
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 0.75rem);
   left: 50%;
   transform: translateX(-50%);
   z-index: 30;
@@ -1841,4 +1841,15 @@
 @media (min-width: 768px) {
   /* Desktop : bottom nav absente, position normale */
   .voter-ballot-floatbar { bottom: 1.5rem; }
+}
+
+/* Padding bas du bulletin : espace suffisant pour que la barre flottante
+   ne cache jamais le dernier candidat */
+.voter-ballot-scroll-padding {
+  /* Mobile : hauteur bottom nav (64) + barre flottante (56) + marge (16) */
+  padding-bottom: calc(64px + 56px + 1rem + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 768px) {
+  /* Desktop : juste la barre flottante (56px) + marge confortable */
+  .voter-ballot-scroll-padding { padding-bottom: 6rem; }
 }

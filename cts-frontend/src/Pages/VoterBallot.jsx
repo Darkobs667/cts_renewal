@@ -80,7 +80,7 @@ export default function VoterBallot() {
 
   return (
     <VoterLayout activePage="scrutins">
-      <div className="mx-auto max-w-3xl space-y-4 pb-28">
+      <div className="mx-auto max-w-3xl space-y-4 voter-ballot-scroll-padding">
 
         {/* Header */}
         <div className="animate-fade-up">
