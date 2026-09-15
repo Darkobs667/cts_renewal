@@ -78,9 +78,25 @@ export default function VoterBallot() {
     } finally { setSubmitting(false); }
   };
 
+  /* ── Barre flottante — rendue hors du scroll via prop floatingBar ── */
+  const floatingBar = selectedEntries.length > 0 ? (
+    <div className="flex items-center justify-between gap-4 rounded-2xl border
+      border-slate-200 bg-white px-4 py-3 shadow-2xl shadow-slate-950/15">
+      <div>
+        <p className="text-sm font-bold text-slate-900">
+          {selectedEntries.length} choix prêt{selectedEntries.length > 1 ? 's' : ''}
+        </p>
+        <p className="text-[10px] text-slate-400">Une seule confirmation suffit.</p>
+      </div>
+      <button onClick={() => setConfirmOpen(true)} className="btn-primary">
+        <Send size={14} />Confirmer
+      </button>
+    </div>
+  ) : null;
+
   return (
-    <VoterLayout activePage="scrutins">
-      <div className="mx-auto max-w-3xl space-y-4 voter-ballot-scroll-padding">
+    <VoterLayout activePage="scrutins" floatingBar={floatingBar}>
+      <div className="mx-auto max-w-3xl space-y-4 pb-6">
 
         {/* Header */}
         <div className="animate-fade-up">
@@ -201,24 +217,6 @@ export default function VoterBallot() {
           );
         })}
       </div>
-
-      {/* Floating bar — remonte au-dessus de la bottom nav sur mobile */}
-      {selectedEntries.length > 0 && (
-        <div className="voter-ballot-floatbar animate-zoom-in">
-          <div className="flex items-center justify-between gap-4 rounded-2xl border
-            border-slate-200 bg-white px-4 py-3 shadow-2xl shadow-slate-950/15">
-            <div>
-              <p className="text-sm font-bold text-slate-900">
-                {selectedEntries.length} choix prêt{selectedEntries.length > 1 ? 's' : ''}
-              </p>
-              <p className="text-[10px] text-slate-400">Une seule confirmation suffit.</p>
-            </div>
-            <button onClick={() => setConfirmOpen(true)} className="btn-primary">
-              <Send size={14} />Confirmer
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Confirm modal */}
       <Modal isOpen={confirmOpen} onClose={() => !submitting && setConfirmOpen(false)}

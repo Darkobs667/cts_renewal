@@ -113,7 +113,7 @@ function BottomNavItem({ item, active }) {
 }
 
 /* ── Main layout ── */
-export default function VoterLayout({ children, activePage }) {
+export default function VoterLayout({ children, activePage, floatingBar }) {
   const navigate  = useNavigate();
   const { user, logout } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
@@ -279,6 +279,15 @@ export default function VoterLayout({ children, activePage }) {
         <main className="voter-content">
           {children}
         </main>
+
+        {/* Barre flottante optionnelle (ex: bouton Confirmer du bulletin)
+            Rendue ICI dans voter-main, pas dans voter-content (overflow)
+            pour éviter le bug iOS Safari avec position:fixed dans overflow */}
+        {floatingBar && (
+          <div className="voter-floatbar-portal">
+            {floatingBar}
+          </div>
+        )}
       </div>
 
       {/* ══════════════════════════════════════════
