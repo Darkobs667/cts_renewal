@@ -49,7 +49,7 @@ export default function SignUp() {
       const { default: FP } = await import('@fingerprintjs/fingerprintjs');
       const fp = await FP.load();
       browserId = (await fp.get()).visitorId;
-    } catch { /* signal anti-abus, non bloquant */ }
+    } catch { /* non bloquant */ }
 
     try {
       const res = await authService.register({
@@ -81,221 +81,141 @@ export default function SignUp() {
   };
 
   return (
-    <div className="auth-root">
-      {/* ════════════ LEFT PANEL ════════════ */}
-      <div className="auth-panel-left">
-        {/* Logo */}
-        <div className="auth-logo">
-          <div className="auth-logo-icon">
-            <img
-              src={logocts}
-              alt="CTS"
-              style={{ height: '1.5rem', width: '1.5rem', objectFit: 'contain' }}
-            />
-          </div>
-          <div>
-            <p className="auth-logo-sub">Cyber Tech</p>
-            <p className="auth-logo-name">Squad</p>
-          </div>
-        </div>
+    <div className="authv2-root">
 
-        {/* Hero */}
-        <div className="auth-hero">
-          <h1 className="auth-hero-title">
-            Rejoignez la<br />
-            <span className="auth-hero-accent">plateforme électorale</span>
-          </h1>
-          <p className="auth-hero-sub">
-            Créez votre compte avec votre adresse institutionnelle UADB pour participer aux élections.
-          </p>
-        </div>
-
-        {/* Footer */}
-        <div className="auth-panel-footer">
-          <ShieldCheck size={13} className="text-emerald-500" />
-          <span>Sécurisé · Anonymisé · Auditable</span>
+      {/* ── Logo + nom centré ── */}
+      <div className="authv2-brand">
+        <img src={logocts} alt="CTS" className="authv2-brand-logo" />
+        <div className="authv2-brand-text">
+          <span className="authv2-brand-name">Cyber Tech Squad</span>
+          <span className="authv2-brand-sub">Plateforme électorale UADB</span>
         </div>
       </div>
 
-      {/* ════════════ RIGHT PANEL ════════════ */}
-      <div className="auth-panel-right">
-        {/* Mobile logo */}
-        <div className="auth-mobile-logo">
-          <img
-            src={logocts}
-            alt="CTS"
-            style={{ height: '2rem', width: '2rem', objectFit: 'contain' }}
-          />
-          <span className="auth-mobile-logo-text">
-            Cyber Tech <span style={{ color: '#059669' }}>Squad</span>
-          </span>
+      {/* ── Carte ── */}
+      <div className="authv2-card">
+
+        <div className="authv2-card-header">
+          <h1 className="authv2-card-title">Créer un compte</h1>
+          <p className="authv2-card-sub">Élection du 2ème Bureau — UADB</p>
         </div>
 
-        {/* Mobile hero */}
-        <div className="auth-mobile-hero">
-          <h2 className="auth-mobile-hero-title">
-            Rejoignez la{' '}
-            <span className="text-emerald-600">plateforme électorale</span>
-          </h2>
-        </div>
+        {serverError && (
+          <div className="authv2-error" role="alert">{serverError}</div>
+        )}
 
-        {/* Card */}
-        <div className="auth-card">
-          <div className="auth-card-header">
-            <h2 className="auth-card-title">Créer un compte</h2>
-            <p className="auth-card-sub">Élection du 2ème Bureau — UADB</p>
+        <form onSubmit={handleSubmit} className="authv2-form">
+
+          {/* Prénom + Nom */}
+          <div className="authv2-name-row">
+            <div className="authv2-field">
+              <label className="authv2-label" htmlFor="su-prenom">Prénom</label>
+              <input
+                id="su-prenom" name="prenom" type="text"
+                autoComplete="given-name"
+                value={form.prenom} onChange={handleChange}
+                placeholder="Alioune" className="authv2-input" required
+              />
+            </div>
+            <div className="authv2-field">
+              <label className="authv2-label" htmlFor="su-nom">Nom</label>
+              <input
+                id="su-nom" name="nom" type="text"
+                autoComplete="family-name"
+                value={form.nom} onChange={handleChange}
+                placeholder="Diop" className="authv2-input" required
+              />
+            </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="auth-form">
-            {serverError && (
-              <div className="auth-error-box" role="alert">
-                {serverError}
-              </div>
-            )}
+          {/* Email */}
+          <div className="authv2-field">
+            <label className="authv2-label" htmlFor="su-email">
+              Adresse institutionnelle
+            </label>
+            <input
+              id="su-email" name="email" type="email"
+              autoComplete="email" inputMode="email"
+              value={form.email} onChange={handleChange}
+              placeholder="prenom.nom@uadb.edu.sn"
+              className={`authv2-input${errors.email ? ' authv2-input-err' : ''}`}
+              required
+            />
+            {errors.email && <p className="authv2-field-err">{errors.email}</p>}
+          </div>
 
-            {/* Name row */}
-            <div className="auth-name-row">
-              <div className="auth-field-group">
-                <label className="auth-label" htmlFor="signup-prenom">Prénom</label>
-                <input
-                  id="signup-prenom"
-                  name="prenom"
-                  type="text"
-                  autoComplete="given-name"
-                  value={form.prenom}
-                  onChange={handleChange}
-                  placeholder="Alioune"
-                  className="auth-input"
-                  required
-                />
-              </div>
-              <div className="auth-field-group">
-                <label className="auth-label" htmlFor="signup-nom">Nom</label>
-                <input
-                  id="signup-nom"
-                  name="nom"
-                  type="text"
-                  autoComplete="family-name"
-                  value={form.nom}
-                  onChange={handleChange}
-                  placeholder="Diop"
-                  className="auth-input"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Email */}
-            <div className="auth-field-group">
-              <label className="auth-label" htmlFor="signup-email">
-                Adresse institutionnelle
-              </label>
+          {/* Mot de passe */}
+          <div className="authv2-field">
+            <label className="authv2-label" htmlFor="su-password">
+              Mot de passe
+            </label>
+            <div className="authv2-input-wrap">
               <input
-                id="signup-email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                inputMode="email"
-                value={form.email}
-                onChange={handleChange}
-                placeholder="prenom.nom@uadb.edu.sn"
-                className={`auth-input ${errors.email ? 'auth-input-error' : ''}`}
+                id="su-password" name="password"
+                type={showPwd ? 'text' : 'password'}
+                autoComplete="new-password"
+                value={form.password} onChange={handleChange}
+                placeholder="12 caractères minimum"
+                className={`authv2-input authv2-input-pr${errors.password ? ' authv2-input-err' : ''}`}
                 required
               />
-              {errors.email && <p className="auth-field-error">{errors.email}</p>}
+              <button
+                type="button" onClick={() => setShowPwd((v) => !v)}
+                className="authv2-eye"
+                aria-label={showPwd ? 'Masquer' : 'Afficher'}
+              >
+                {showPwd ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
             </div>
+            {errors.password && <p className="authv2-field-err">{errors.password}</p>}
 
-            {/* Password */}
-            <div className="auth-field-group">
-              <label className="auth-label" htmlFor="signup-password">
-                Mot de passe
-              </label>
-              <div className="auth-input-wrapper">
-                <input
-                  id="signup-password"
-                  name="password"
-                  type={showPwd ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder="12 caractères minimum"
-                  className={`auth-input pr-12 ${errors.password ? 'auth-input-error' : ''}`}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPwd((v) => !v)}
-                  className="auth-eye-btn"
-                  aria-label={showPwd ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                >
-                  {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-              {errors.password && <p className="auth-field-error">{errors.password}</p>}
-
-              {/* Password strength hint */}
-              {form.password.length > 0 && (
-                <div className="auth-pwd-hint">
-                  <div className="auth-pwd-bar">
-                    {[4, 8, 12].map((threshold) => (
-                      <div
-                        key={threshold}
-                        className={`auth-pwd-segment ${
-                          form.password.length >= threshold
-                            ? form.password.length >= 12
-                              ? 'auth-pwd-strong'
-                              : 'auth-pwd-medium'
-                            : 'auth-pwd-weak'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <span className={`auth-pwd-label ${
-                    form.password.length >= 12
-                      ? 'text-emerald-600'
-                      : form.password.length >= 8
-                      ? 'text-amber-500'
-                      : 'text-red-500'
-                  }`}>
-                    {form.password.length >= 12 ? 'Fort' : form.password.length >= 8 ? 'Moyen' : 'Faible'}
-                  </span>
+            {/* Force du mot de passe */}
+            {form.password.length > 0 && (
+              <div className="authv2-pwd-hint">
+                <div className="authv2-pwd-bar">
+                  {[4, 8, 12].map((t) => (
+                    <div key={t} className={`authv2-pwd-seg ${
+                      form.password.length >= t
+                        ? form.password.length >= 12 ? 'authv2-pwd-strong'
+                          : 'authv2-pwd-medium'
+                        : 'authv2-pwd-weak'
+                    }`} />
+                  ))}
                 </div>
-              )}
-            </div>
+                <span className={`authv2-pwd-lbl ${
+                  form.password.length >= 12 ? 'authv2-pwd-lbl-strong'
+                  : form.password.length >= 8 ? 'authv2-pwd-lbl-medium'
+                  : 'authv2-pwd-lbl-weak'
+                }`}>
+                  {form.password.length >= 12 ? 'Fort'
+                   : form.password.length >= 8 ? 'Moyen' : 'Faible'}
+                </span>
+              </div>
+            )}
+          </div>
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading || Boolean(errors.email || errors.password) || !form.email || !form.prenom || !form.nom}
-              className="auth-submit-btn"
-            >
-              {loading ? (
-                <>
-                  <span className="auth-spinner" />
-                  Création en cours…
-                </>
-              ) : (
-                <>
-                  <UserPlus size={17} />
-                  Créer mon compte
-                </>
-              )}
-            </button>
-          </form>
+          <button
+            type="submit"
+            disabled={loading || Boolean(errors.email || errors.password)
+              || !form.email || !form.prenom || !form.nom}
+            className="authv2-submit"
+          >
+            {loading
+              ? <><span className="authv2-spinner" />Création…</>
+              : <><UserPlus size={18} />Créer mon compte</>
+            }
+          </button>
+        </form>
 
-          <p className="auth-switch">
-            Déjà inscrit ?{' '}
-            <Link to="/login" className="auth-switch-link">
-              Se connecter
-            </Link>
-          </p>
-        </div>
+        <p className="authv2-switch">
+          Déjà inscrit ?{' '}
+          <Link to="/login" className="authv2-switch-link">Se connecter</Link>
+        </p>
+      </div>
 
-        {/* Mobile footer */}
-        <div className="auth-mobile-footer">
-          <ShieldCheck size={11} className="text-emerald-500" />
-          <span>Sécurisé · Anonymisé · Auditable</span>
-        </div>
+      <div className="authv2-footer">
+        <ShieldCheck size={12} style={{ color: '#16a34a', flexShrink: 0 }} />
+        Sécurisé · Anonymisé · Auditable
       </div>
     </div>
   );

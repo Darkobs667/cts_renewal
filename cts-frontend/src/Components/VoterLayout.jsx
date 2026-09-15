@@ -142,33 +142,29 @@ export default function VoterLayout({ children, activePage }) {
 
         {/* Logo */}
         <div className="voter-sidebar-logo">
-          <div className="voter-sidebar-logo-icon">
-            <img
-              src={Logocts}
-              alt="CTS"
-              style={{ height: '1.5rem', width: '1.5rem', objectFit: 'contain' }}
-            />
-          </div>
+          <img
+            src={Logocts}
+            alt="CTS"
+            style={{ height: '2.25rem', width: '2.25rem', objectFit: 'contain', flexShrink: 0 }}
+          />
           <div style={{ lineHeight: 1.25 }}>
             <span style={{
               display: 'block',
-              fontSize: '0.5625rem',
+              fontSize: '0.75rem',
               fontWeight: 900,
-              textTransform: 'uppercase',
-              letterSpacing: '0.18em',
-              color: '#94a3b8',
+              color: '#0f172a',
+              letterSpacing: '-0.01em',
             }}>
-              Cyber Tech
+              Cyber Tech Squad
             </span>
             <span style={{
               display: 'block',
-              fontSize: '0.875rem',
-              fontWeight: 900,
-              textTransform: 'uppercase',
-              color: '#16a34a',
-              lineHeight: 1,
+              fontSize: '0.5625rem',
+              fontWeight: 600,
+              color: '#94a3b8',
+              marginTop: '1px',
             }}>
-              Squad
+              Plateforme électorale
             </span>
           </div>
         </div>

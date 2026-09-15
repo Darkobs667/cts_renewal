@@ -52,167 +52,107 @@ export default function LoginCTS() {
   if (user) return <Navigate to={user.role === 'admin' ? '/admin' : '/voterDashboard'} replace />;
 
   return (
-    <div className="auth-root">
-      {/* ════════════ LEFT PANEL ════════════ */}
-      <div className="auth-panel-left">
-        {/* Logo — ancré en haut à gauche */}
-        <div className="auth-logo">
-          <div className="auth-logo-icon">
-            <img
-              src={logocts}
-              alt="CTS"
-              style={{ height: '1.5rem', width: '1.5rem', objectFit: 'contain' }}
-            />
-          </div>
-          <div>
-            <p className="auth-logo-sub">Cyber Tech</p>
-            <p className="auth-logo-name">Squad</p>
-          </div>
-        </div>
+    <div className="authv2-root">
 
-        {/* Hero text */}
-        <div className="auth-hero">
-          <div className="auth-live-badge">
-            <span className="status-dot-live" />
-            Plateforme électorale active
-          </div>
-          <h1 className="auth-hero-title">
-            Élections du<br />
-            <span className="auth-hero-accent">2ème Bureau</span>
-          </h1>
-          <p className="auth-hero-sub">
-            Votez en toute sécurité et transparence.<br />Chaque voix compte.
-          </p>
-        </div>
-
-        {/* Footer */}
-        <div className="auth-panel-footer">
-          <ShieldCheck size={13} className="text-emerald-500" />
-          <span>Sécurisé · Anonymisé · Auditable</span>
+      {/* ── Logo + nom centré (comme UAD Deukouway) ── */}
+      <div className="authv2-brand">
+        <img src={logocts} alt="CTS" className="authv2-brand-logo" />
+        <div className="authv2-brand-text">
+          <span className="authv2-brand-name">Cyber Tech Squad</span>
+          <span className="authv2-brand-sub">Plateforme électorale UADB</span>
         </div>
       </div>
 
-      {/* ════════════ RIGHT PANEL ════════════ */}
-      <div className="auth-panel-right">
-        {/* Mobile logo */}
-        <div className="auth-mobile-logo">
-          <img
-            src={logocts}
-            alt="CTS"
-            style={{ height: '2rem', width: '2rem', objectFit: 'contain' }}
-          />
-          <span className="auth-mobile-logo-text">
-            Cyber Tech <span style={{ color: '#059669' }}>Squad</span>
-          </span>
+      {/* ── Carte principale ── */}
+      <div className="authv2-card">
+
+        {/* En-tête carte */}
+        <div className="authv2-card-header">
+          <h1 className="authv2-card-title">Connexion</h1>
+          <p className="authv2-card-sub">Accédez à votre espace électoral</p>
         </div>
 
-        {/* Mobile hero */}
-        <div className="auth-mobile-hero">
-          <div className="auth-mobile-live-badge">
-            <span className="status-dot-live" />
-            Plateforme électorale active
+        {/* Erreur serveur */}
+        {serverError && (
+          <div className="authv2-error" role="alert">{serverError}</div>
+        )}
+
+        {/* Formulaire */}
+        <form onSubmit={handleSubmit} className="authv2-form">
+
+          {/* Email */}
+          <div className="authv2-field">
+            <label className="authv2-label" htmlFor="login-email">
+              Adresse institutionnelle
+            </label>
+            <input
+              id="login-email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              inputMode="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="prenom.nom@uadb.edu.sn"
+              className={`authv2-input${errors.email ? ' authv2-input-err' : ''}`}
+              required
+            />
+            {errors.email && <p className="authv2-field-err">{errors.email}</p>}
           </div>
-          <h2 className="auth-mobile-hero-title">
-            Élections du <span className="text-emerald-600">2ème Bureau</span>
-          </h2>
-        </div>
 
-        {/* Card */}
-        <div className="auth-card">
-          <div className="auth-card-header">
-            <h2 className="auth-card-title">Connexion</h2>
-            <p className="auth-card-sub">Accédez à votre espace électoral.</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="auth-form">
-            {serverError && (
-              <div className="auth-error-box" role="alert">
-                {serverError}
-              </div>
-            )}
-
-            {/* Email */}
-            <div className="auth-field-group">
-              <label className="auth-label" htmlFor="login-email">
-                Adresse institutionnelle
-              </label>
+          {/* Mot de passe */}
+          <div className="authv2-field">
+            <label className="authv2-label" htmlFor="login-password">
+              Mot de passe
+            </label>
+            <div className="authv2-input-wrap">
               <input
-                id="login-email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                inputMode="email"
-                value={form.email}
+                id="login-password"
+                name="password"
+                type={showPwd ? 'text' : 'password'}
+                autoComplete="current-password"
+                value={form.password}
                 onChange={handleChange}
-                placeholder="prenom.nom@uadb.edu.sn"
-                className={`auth-input ${errors.email ? 'auth-input-error' : ''}`}
+                placeholder="••••••••••••"
+                className={`authv2-input authv2-input-pr${errors.password ? ' authv2-input-err' : ''}`}
                 required
               />
-              {errors.email && <p className="auth-field-error">{errors.email}</p>}
+              <button
+                type="button"
+                onClick={() => setShowPwd((v) => !v)}
+                className="authv2-eye"
+                aria-label={showPwd ? 'Masquer' : 'Afficher'}
+              >
+                {showPwd ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
             </div>
+            {errors.password && <p className="authv2-field-err">{errors.password}</p>}
+          </div>
 
-            {/* Password */}
-            <div className="auth-field-group">
-              <label className="auth-label" htmlFor="login-password">
-                Mot de passe
-              </label>
-              <div className="auth-input-wrapper">
-                <input
-                  id="login-password"
-                  name="password"
-                  type={showPwd ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder="••••••••••••"
-                  className={`auth-input pr-12 ${errors.password ? 'auth-input-error' : ''}`}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPwd((v) => !v)}
-                  className="auth-eye-btn"
-                  aria-label={showPwd ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                >
-                  {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-              {errors.password && <p className="auth-field-error">{errors.password}</p>}
-            </div>
+          {/* Bouton */}
+          <button
+            type="submit"
+            disabled={loading || Boolean(errors.email || errors.password) || !form.email}
+            className="authv2-submit"
+          >
+            {loading
+              ? <><span className="authv2-spinner" />Connexion…</>
+              : <><LogIn size={18} />Se connecter</>
+            }
+          </button>
+        </form>
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading || Boolean(errors.email || errors.password) || !form.email}
-              className="auth-submit-btn"
-            >
-              {loading ? (
-                <>
-                  <span className="auth-spinner" />
-                  Connexion en cours…
-                </>
-              ) : (
-                <>
-                  <LogIn size={17} />
-                  Se connecter
-                </>
-              )}
-            </button>
-          </form>
+        {/* Lien inscription */}
+        <p className="authv2-switch">
+          Pas encore inscrit ?{' '}
+          <Link to="/signup" className="authv2-switch-link">Créer un compte</Link>
+        </p>
+      </div>
 
-          <p className="auth-switch">
-            Pas encore inscrit ?{' '}
-            <Link to="/signup" className="auth-switch-link">
-              Créer un compte
-            </Link>
-          </p>
-        </div>
-
-        {/* Mobile footer */}
-        <div className="auth-mobile-footer">
-          <ShieldCheck size={11} className="text-emerald-500" />
-          <span>Sécurisé · Anonymisé · Auditable</span>
-        </div>
+      {/* Footer */}
+      <div className="authv2-footer">
+        <ShieldCheck size={12} style={{ color: '#16a34a', flexShrink: 0 }} />
+        Sécurisé · Anonymisé · Auditable
       </div>
     </div>
   );
