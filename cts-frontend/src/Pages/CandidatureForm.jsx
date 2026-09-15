@@ -27,10 +27,12 @@ export default function CandidatureForm() {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
+    // Charger TOUS les postes (actifs et inactifs) pour que l'électeur puisse postuler
+    // même si aucun scrutin n'est encore ouvert au vote.
     api.get('/positions')
       .then((res) => {
         if (res.data?.success) {
-          setPositions((res.data.data || []).filter((p) => p.is_active == 1));
+          setPositions(res.data.data || []);
         }
       })
       .finally(() => setLoadingPos(false));
@@ -184,9 +186,9 @@ export default function CandidatureForm() {
               rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50">
               <FilePlus size={22} className="text-slate-300" />
             </div>
-            <p className="text-sm font-bold text-slate-600">Aucun poste disponible</p>
+            <p className="text-sm font-bold text-slate-600">Aucun poste configuré</p>
             <p className="mt-1 text-xs text-slate-400">
-              Les candidatures sont fermées pour le moment.
+              Aucun poste n'a encore été créé par l'administration.
             </p>
           </div>
         ) : (

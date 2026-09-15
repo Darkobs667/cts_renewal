@@ -23,14 +23,7 @@ export default function Navbar({ toggleSidebar }) {
           <Menu size={18} />
         </button>
 
-        {/* Live badge */}
-        <div className="hidden items-center gap-2 rounded-lg border border-slate-200
-          bg-slate-50 px-3 py-1.5 md:flex">
-          <span className="status-dot-live" />
-          <span className="text-[10px] font-semibold text-slate-500 tracking-wide">
-            Technologie · Sécurité · Innovation
-          </span>
-        </div>
+        {/* Badge supprimé */}
       </div>
 
       {/* Right */}

@@ -130,7 +130,7 @@ export default function VoterDashboard() {
         <div className="voter-welcome-banner animate-fade-up">
           <div>
             <p className="voter-welcome-greeting">
-              Bonjour{fullName ? `, ${user.first_name}` : ''} 👋
+              Bonjour{fullName ? `, ${user.first_name}` : ''}
             </p>
             <h1 className="voter-welcome-title">Votre espace électoral</h1>
           </div>

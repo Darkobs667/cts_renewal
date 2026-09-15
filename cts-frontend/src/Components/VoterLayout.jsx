@@ -248,11 +248,7 @@ export default function VoterLayout({ children, activePage }) {
             </span>
           </div>
 
-          {/* Badge session sécurisée — desktop uniquement */}
-          <div className="voter-topbar-session-badge">
-            <span className="status-dot-live" />
-            Session sécurisée
-          </div>
+          {/* Badge session — desktop uniquement — supprimé */}
 
           {/* User chip — toujours visible */}
           <div className="voter-topbar-user">
