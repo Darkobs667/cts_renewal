@@ -250,8 +250,8 @@ export default function VoterLayout({ children, activePage }) {
 
           {/* Badge session — desktop uniquement — supprimé */}
 
-          {/* User chip — toujours visible */}
-          <div className="voter-topbar-user">
+          {/* User chip — toujours à droite via margin-left: auto */}
+          <div className="voter-topbar-user" style={{ marginLeft: 'auto' }}>
             <div className="voter-avatar voter-avatar-sm">{initials}</div>
             <div className="voter-topbar-user-info">
               <p style={{

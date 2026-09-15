@@ -1822,3 +1822,23 @@
   border-bottom: 1px solid #f1f5f9;
   flex-shrink: 0;
 }
+
+/* ── Barre flottante bulletin de vote ───────────────────────────────────────
+   Sur mobile : remonte au-dessus de la bottom nav (≈ 64px)
+   Sur desktop : position classique en bas
+   ─────────────────────────────────────────────────────────────────────────── */
+.voter-ballot-floatbar {
+  position: fixed;
+  /* Mobile : au-dessus de la bottom nav */
+  bottom: calc(64px + 0.75rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  width: 100%;
+  max-width: 36rem;
+  padding: 0 1rem;
+}
+@media (min-width: 768px) {
+  /* Desktop : bottom nav absente, position normale */
+  .voter-ballot-floatbar { bottom: 1.5rem; }
+}

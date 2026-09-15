@@ -202,9 +202,9 @@ export default function VoterBallot() {
         })}
       </div>
 
-      {/* Floating bar */}
+      {/* Floating bar — remonte au-dessus de la bottom nav sur mobile */}
       {selectedEntries.length > 0 && (
-        <div className="fixed bottom-5 left-1/2 z-30 w-full max-w-xl -translate-x-1/2 px-4 animate-zoom-in">
+        <div className="voter-ballot-floatbar animate-zoom-in">
           <div className="flex items-center justify-between gap-4 rounded-2xl border
             border-slate-200 bg-white px-4 py-3 shadow-2xl shadow-slate-950/15">
             <div>
