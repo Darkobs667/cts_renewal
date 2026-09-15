@@ -11,7 +11,8 @@ function normalise(c) {
   return {
     id:      c.id,
     name:    `${c.user?.first_name ?? ''} ${c.user?.last_name ?? ''}`.trim() || 'Candidat',
-    slogan:  c.slogan || c.bio || 'Aucune profession de foi.',
+    slogan:  c.slogan || null,
+    bio:     c.bio    || null,
     initial: (c.user?.first_name?.[0] ?? 'C').toUpperCase(),
     // photo_url vient du backend (Cloudinary URL) ou photo_path en fallback
     photo:   c.photo_url || c.photo_path || null,
@@ -122,26 +123,29 @@ export default function VoterBallot() {
               </div>
 
               {/* Candidates */}
-              <div className="grid gap-2 p-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-2 p-4">
                 {ballot.candidates.map((c) => {
                   const isSel = selected?.id === c.id;
                   return (
                     <button key={c.id} type="button" onClick={() => choose(ballot.id, c)}
-                      className={`flex items-center gap-3 rounded-xl border p-3 text-left
-                        transition-all duration-150 ${
+                      className={`flex items-start gap-3 rounded-xl border p-3.5 text-left
+                        transition-all duration-150 w-full ${
                         isSel
                           ? 'border-emerald-500 bg-emerald-50 shadow-sm'
                           : 'border-slate-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/40'
                       }`}>
-                      {/* Avatar : photo Cloudinary si disponible, sinon initiale */}
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center
+                      {/* Avatar photo ou initiale */}
+                      <div className={`flex h-11 w-11 shrink-0 items-center justify-center
                         rounded-xl overflow-hidden text-sm font-black select-none ${
                         !c.photo ? (isSel ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500') : ''
                       }`}>
                         {c.photo
                           ? <img src={c.photo} alt={c.name}
                               className="h-full w-full object-cover"
-                              onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextSibling.style.display = 'flex';
+                              }}
                             />
                           : null
                         }
@@ -149,12 +153,25 @@ export default function VoterBallot() {
                           {c.initial}
                         </span>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-slate-900">{c.name}</p>
-                        <p className="mt-0.5 truncate text-[10px] text-slate-400">{c.slogan}</p>
+
+                      {/* Info candidat — slogan et bio non tronqués */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-slate-900 leading-snug">{c.name}</p>
+                        {c.slogan && (
+                          <p className="mt-1 text-[11px] font-semibold text-emerald-700 leading-relaxed">
+                            « {c.slogan} »
+                          </p>
+                        )}
+                        {c.bio && (
+                          <p className="mt-1 text-[11px] text-slate-500 leading-relaxed line-clamp-3">
+                            {c.bio}
+                          </p>
+                        )}
                       </div>
+
+                      {/* Radio */}
                       <span className={`flex h-5 w-5 shrink-0 items-center justify-center
-                        rounded-full border-2 transition-all ${
+                        rounded-full border-2 transition-all mt-0.5 ${
                         isSel ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-300'
                       }`}>
                         {isSel && <Check size={11} strokeWidth={3} />}
