@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Download, History, RefreshCw,
+  History, Printer, RefreshCw,
   CheckCircle2, CalendarDays, Hash, ReceiptText, ShieldCheck,
 } from 'lucide-react';
 import VoterLayout from '../Components/VoterLayout';
 import Loading from '../Components/Loading';
 import api from '../services/api';
-import toast from 'react-hot-toast';
 
 /* ── Animated counter ── */
 function AnimatedNumber({ value, duration = 600 }) {
@@ -27,18 +26,98 @@ function AnimatedNumber({ value, duration = 600 }) {
 }
 
 /* ── Vote card ── */
-function VoteCard({ v, index, onDownload }) {
-  const [busy, setBusy] = useState(false);
-
-  const handleClick = async () => {
-    setBusy(true);
-    await onDownload(v.id);
-    setTimeout(() => setBusy(false), 1500);
-  };
-
+function VoteCard({ v, index }) {
   const date = new Date(v.date_voted).toLocaleDateString('fr-FR', {
     day: 'numeric', month: 'long', year: 'numeric',
   });
+  const time = new Date(v.date_voted).toLocaleTimeString('fr-FR', {
+    hour: '2-digit', minute: '2-digit',
+  });
+
+  /* Impression navigateur : ouvre une fenêtre avec les détails du vote */
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank', 'width=600,height=700');
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Reçu de vote — ${v.transaction_ref}</title>
+        <style>
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f8fafc; color: #1e293b;
+            padding: 2rem; min-height: 100vh;
+          }
+          .card {
+            background: #fff; border-radius: 1rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 24px -4px rgba(15,23,42,.12);
+            max-width: 480px; margin: 0 auto; padding: 2rem;
+          }
+          .header { text-align: center; margin-bottom: 1.5rem; }
+          .logo { font-size: 1.25rem; font-weight: 900; color: #16a34a; }
+          .logo span { color: #0f172a; }
+          .title { margin-top: 1rem; font-size: 1.125rem; font-weight: 800; color: #0f172a; }
+          .badge {
+            display: inline-block; margin-top: .5rem;
+            background: #f0fdf4; color: #16a34a;
+            border: 1px solid #bbf7d0; border-radius: 9999px;
+            padding: .25rem .875rem; font-size: .75rem; font-weight: 700;
+          }
+          .divider { height: 1px; background: #f1f5f9; margin: 1.25rem 0; }
+          .row { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: .75rem; }
+          .label { font-size: .8125rem; color: #64748b; }
+          .value { font-size: .8125rem; font-weight: 700; color: #0f172a; text-align: right; }
+          .ref {
+            font-family: monospace; font-size: .8125rem; font-weight: 800;
+            color: #16a34a; letter-spacing: .05em;
+          }
+          .footer {
+            margin-top: 1.5rem; text-align: center;
+            font-size: .6875rem; color: #94a3b8; font-weight: 600;
+            text-transform: uppercase; letter-spacing: .1em;
+          }
+          @media print {
+            body { background: #fff; padding: 0; }
+            .card { box-shadow: none; border: 1px solid #e2e8f0; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <div class="header">
+            <div class="logo"><span>Cyber Tech</span> Squad</div>
+            <div class="title">Reçu de participation</div>
+            <div class="badge">Vote certifié</div>
+          </div>
+          <div class="divider"></div>
+          <div class="row">
+            <span class="label">Scrutin</span>
+            <span class="value">${v.election_title}</span>
+          </div>
+          <div class="row">
+            <span class="label">Date</span>
+            <span class="value">${date} à ${time}</span>
+          </div>
+          <div class="row">
+            <span class="label">Référence</span>
+            <span class="value ref">${v.transaction_ref}</span>
+          </div>
+          <div class="divider"></div>
+          <div class="footer">
+            Vote anonymisé · Registre audité CTS · UADB
+          </div>
+        </div>
+        <script>
+          window.onload = function() { window.print(); };
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 
   return (
     <article
@@ -52,13 +131,13 @@ function VoteCard({ v, index, onDownload }) {
 
       <div className="flex flex-col gap-4 p-4 pl-5 sm:flex-row sm:items-center sm:p-5 sm:pl-6">
 
-        {/* Index badge */}
+        {/* Index */}
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl
           border border-emerald-100 bg-emerald-50 text-[11px] font-black tabular-nums text-emerald-700">
           {String(index + 1).padStart(2, '0')}
         </div>
 
-        {/* Main info */}
+        {/* Info */}
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-center gap-2">
             <CheckCircle2 size={13} className="shrink-0 text-emerald-500" strokeWidth={2.5} />
@@ -88,16 +167,14 @@ function VoteCard({ v, index, onDownload }) {
           </div>
         </div>
 
-        {/* Download */}
+        {/* Imprimer */}
         <button
-          onClick={handleClick}
-          disabled={busy}
-          className="btn-primary shrink-0"
+          onClick={handlePrint}
+          className="btn-secondary shrink-0 gap-1.5"
+          title="Imprimer le reçu"
         >
-          {busy
-            ? <><RefreshCw size={13} className="animate-spin" />Préparation…</>
-            : <><Download size={13} />Reçu PDF</>
-          }
+          <Printer size={13} />
+          <span className="hidden sm:inline">Imprimer</span>
         </button>
       </div>
     </article>
@@ -106,9 +183,9 @@ function VoteCard({ v, index, onDownload }) {
 
 /* ── Page ── */
 export default function VoterHistory() {
-  const [loading,  setLoading]  = useState(true);
-  const [syncing,  setSyncing]  = useState(false);
-  const [votes,    setVotes]    = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [votes,   setVotes]   = useState([]);
 
   const load = async (soft = false) => {
     if (soft) setSyncing(true); else setLoading(true);
@@ -120,18 +197,6 @@ export default function VoterHistory() {
 
   useEffect(() => { load(); }, []);
 
-  const downloadReceipt = async (id) => {
-    try {
-      const res = await api.get(`/voter/receipt/${id}`, { responseType: 'blob' });
-      const url  = URL.createObjectURL(new Blob([res.data]));
-      const link = Object.assign(document.createElement('a'), {
-        href: url, download: `Recu_Vote_${id}.pdf`,
-      });
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch { toast.error('Impossible de générer le reçu.'); }
-  };
-
   return (
     <VoterLayout activePage="votes">
       {loading ? (
@@ -139,7 +204,7 @@ export default function VoterHistory() {
       ) : (
         <div className="mx-auto max-w-3xl space-y-5 pb-10">
 
-          {/* Header card */}
+          {/* Header */}
           <div className="content-card p-5 sm:p-6 animate-fade-up">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-4">
@@ -153,7 +218,7 @@ export default function VoterHistory() {
                   </p>
                   <h1 className="mt-0.5 text-xl font-black text-slate-900">Mes votes</h1>
                   <p className="mt-0.5 text-xs text-slate-500">
-                    Consultez et téléchargez vos preuves de participation.
+                    Consultez et imprimez vos preuves de participation.
                   </p>
                 </div>
               </div>
@@ -183,7 +248,7 @@ export default function VoterHistory() {
           {votes.length > 0 ? (
             <div className="space-y-3">
               {votes.map((v, i) => (
-                <VoteCard key={v.id} v={v} index={i} onDownload={downloadReceipt} />
+                <VoteCard key={v.id} v={v} index={i} />
               ))}
             </div>
           ) : (

@@ -27,11 +27,13 @@ function ElectionCard({ election, onEdit, onDelete, onToggle }) {
 
         {/* Info */}
         <div className="election-card-body">
-          <div className="flex flex-wrap items-center gap-2 mb-0.5">
-            <h3 className="text-sm font-bold text-slate-900 leading-tight">{election.title}</h3>
-          </div>
+          <h3 className="text-sm font-bold text-slate-900 leading-snug mb-1">
+            {election.title}
+          </h3>
           {election.description ? (
-            <p className="text-[11px] text-slate-400 line-clamp-1">{election.description}</p>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              {election.description}
+            </p>
           ) : (
             <p className="text-[11px] italic text-slate-300">Aucune description</p>
           )}
