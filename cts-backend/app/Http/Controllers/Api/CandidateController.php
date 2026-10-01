@@ -174,6 +174,11 @@ class CandidateController extends Controller
         $candidate->status = 'valide';
         $candidate->save();
 
+        \App\Models\AuditLog::record('candidate.approve', 'Candidate', $candidate->id, [
+            'position' => $candidate->position?->title,
+            'user'     => $candidate->user?->email,
+        ]);
+
         $this->invalidateCandidateCache($id);
         $this->forgetCache('admin_global_stats');
 
@@ -191,6 +196,11 @@ class CandidateController extends Controller
         $candidate->status = 'refuse';
         $candidate->save();
 
+        \App\Models\AuditLog::record('candidate.reject', 'Candidate', $candidate->id, [
+            'position' => $candidate->position?->title,
+            'user'     => $candidate->user?->email,
+        ]);
+
         $this->invalidateCandidateCache($id);
         $this->forgetCache('admin_global_stats');
 
@@ -198,6 +208,32 @@ class CandidateController extends Controller
     }
 
     // ─── Postuler (électeur) ──────────────────────────────────────────────────
+
+    /**
+     * Statut des candidatures de l'électeur connecté (suggestion D).
+     */
+    public function myCandidatures(): JsonResponse
+    {
+        $user = auth('api')->user();
+        if (!$user) {
+            return response()->json(['message' => 'Non authentifié.'], 401);
+        }
+
+        $candidatures = Candidate::with('position')
+            ->where('user_id', $user->id)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn ($c) => [
+                'id'         => $c->id,
+                'position'   => $c->position?->title ?? 'Poste inconnu',
+                'status'     => $c->status,     // en_attente | valide | refuse
+                'slogan'     => $c->slogan,
+                'photo_url'  => $c->photo_url,
+                'created_at' => $c->created_at?->toIso8601String(),
+            ]);
+
+        return response()->json(['success' => true, 'data' => $candidatures]);
+    }
 
     /**
      * Un électeur soumet sa propre candidature.

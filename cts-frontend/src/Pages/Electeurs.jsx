@@ -22,6 +22,8 @@ export default function Electeurs() {
   const [confirmation, setConfirmation] = useState(null);
   const [actionLoading,setActionLoading]= useState(false);
   const [tmpPassword,  setTmpPassword]  = useState(null);
+  const [page,         setPage]         = useState(1);
+  const [meta,         setMeta]         = useState(null);
 
   // Associate modal
   const [positions,      setPositions]      = useState([]);
@@ -30,21 +32,24 @@ export default function Electeurs() {
   const [assocUsers,     setAssocUsers]     = useState([]);
   const [assocSearch,    setAssocSearch]    = useState('');
 
-  const loadElecteurs = async () => {
+  const loadElecteurs = async (p = page) => {
     setLoading(true);
-    try { setElecteurs(await electeurService.getAll()); }
+    try {
+      const res = await electeurService.getAll(p, 50, search);
+      setElecteurs(res.data || []);
+      setMeta(res.meta || null);
+    }
     catch { toast.error('Erreur lors du chargement.'); }
     finally { setLoading(false); }
   };
 
-  const loadPositions = async () => {
-    try {
-      const res = await api.get('/positions');
-      if (res.data?.success) setPositions(res.data.data || []);
-    } catch {}
-  };
+  useEffect(() => { loadElecteurs(1); }, [search]);
 
-  useEffect(() => { loadElecteurs(); loadPositions(); }, []);
+  useEffect(() => {
+    api.get('/positions').then((res) => {
+      if (res.data?.success) setPositions(res.data.data || []);
+    }).catch(() => {});
+  }, []);
 
   /* ── Actions ── */
   const confirmAction = async () => {
@@ -206,7 +211,7 @@ export default function Electeurs() {
           <div>
             <h1 className="text-xl font-black text-slate-900">Registre Électoral</h1>
             <p className="mt-0.5 text-xs text-slate-500">
-              {electeurs.length} électeur{electeurs.length > 1 ? 's' : ''} inscrits
+              {meta?.total ?? electeurs.length} électeur{(meta?.total ?? electeurs.length) > 1 ? 's' : ''} inscrits
             </p>
           </div>
           <div className="flex gap-2">
@@ -309,6 +314,26 @@ export default function Electeurs() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          {/* Pagination */}
+          {meta && meta.last_page > 1 && (
+            <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3">
+              <p className="text-xs text-slate-400">
+                {meta.total} électeur{meta.total > 1 ? 's' : ''} · Page {meta.current_page}/{meta.last_page}
+              </p>
+              <div className="flex gap-1">
+                <button
+                  disabled={meta.current_page <= 1}
+                  onClick={() => { setPage(meta.current_page - 1); loadElecteurs(meta.current_page - 1); }}
+                  className="btn-secondary text-xs px-3 py-1.5 disabled:opacity-40"
+                >Préc.</button>
+                <button
+                  disabled={meta.current_page >= meta.last_page}
+                  onClick={() => { setPage(meta.current_page + 1); loadElecteurs(meta.current_page + 1); }}
+                  className="btn-secondary text-xs px-3 py-1.5 disabled:opacity-40"
+                >Suiv.</button>
+              </div>
             </div>
           )}
         </div>

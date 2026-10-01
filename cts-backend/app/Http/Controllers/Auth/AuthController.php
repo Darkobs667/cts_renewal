@@ -29,11 +29,16 @@ class AuthController extends Controller
             'code'       => 'nullable|string|max:100|unique:users,code',
             'email'      => ['required', 'string', 'email:rfc', 'max:255', 'regex:/^[^@\\s]+@uadb\\.edu\\.sn$/i', 'unique:users,email'],
             'password'   => 'required|string|min:12|confirmed',
-            'browserId' => 'required|string|max:255',
+            'browserId'  => 'required|string|max:255',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        // Honeypot anti-bot : si le champ caché "website" est rempli → bot détecté.
+        if (!empty($request->input('website'))) {
+            return response()->json(['message' => 'Requête invalide.'], 422);
         }
         
 

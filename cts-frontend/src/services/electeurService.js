@@ -5,9 +5,11 @@ export const electeurService = {
      * Récupère la liste complète des électeurs (admin uniquement).
      * Le backend renvoie { success: true, data: [...] }.
      */
-    async getAll() {
-        const response = await api.get('/users');
-        return response.data.data;
+    async getAll(page = 1, perPage = 50, search = '') {
+        const params = { page, per_page: perPage };
+        if (search) params.search = search;
+        const response = await api.get('/users', { params });
+        return response.data; // retourne { data, meta }
     },
 
     /**

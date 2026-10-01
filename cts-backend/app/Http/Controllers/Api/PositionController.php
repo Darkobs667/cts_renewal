@@ -105,15 +105,17 @@ class PositionController extends Controller
         $result = $this->positionService->update($position, $data);
 
         if ($result) {
-            // ← VIDER LE CACHE APRÈS MODIFICATION
             $this->forgetCache('positions_list');
             $this->forgetCache("position_{$id}");
-            
-            // ← AJOUT : VIDER LES CACHES DES RÉSULTATS ET STATS
             $this->forgetCache('vote_results_all');
             $this->forgetCache('vote_results_' . $id);
             $this->forgetCache('admin_global_stats');
-            
+
+            \App\Models\AuditLog::record('position.update', 'Position', (int) $id, [
+                'title'     => $position->fresh()->title,
+                'is_active' => $data['is_active'] ?? null,
+            ]);
+
             return response()->json([
                 'message' => 'Poste mis à jour avec succès',
                 'data' => $position->fresh()

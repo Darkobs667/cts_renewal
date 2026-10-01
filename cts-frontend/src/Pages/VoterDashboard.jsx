@@ -1,13 +1,38 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Vote, CheckSquare, ArrowRight, ShieldCheck,
   FilePlus, Trophy, Clock, Zap, ChevronRight,
+  CheckCircle2, XCircle, AlertCircle, Timer,
 } from 'lucide-react';
 import VoterLayout from '../Components/VoterLayout';
 import Loading from '../Components/Loading';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
+
+/* ── Countdown depuis started_at ── */
+function Countdown({ startedAt }) {
+  const [elapsed, setElapsed] = useState('');
+  useEffect(() => {
+    const start = new Date(startedAt).getTime();
+    const tick = () => {
+      const diff = Date.now() - start;
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setElapsed(`${h > 0 ? h + 'h ' : ''}${m}m ${s}s`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [startedAt]);
+
+  return (
+    <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-600">
+      <Timer size={9} />Ouvert depuis {elapsed}
+    </span>
+  );
+}
 
 /* ── Scrutin row ── */
 function ScrutinRow({ election, hasVoted, onVote, index }) {
@@ -15,35 +40,34 @@ function ScrutinRow({ election, hasVoted, onVote, index }) {
   return (
     <div
       className={`voter-scrutin-row animate-fade-up ${
-        hasVoted ? 'voter-scrutin-row-done' : active ? 'voter-scrutin-row-active' : 'voter-scrutin-row-closed'
+        hasVoted ? 'voter-scrutin-row-done'
+        : active ? 'voter-scrutin-row-active'
+        : 'voter-scrutin-row-closed'
       }`}
       style={{ animationDelay: `${index * 60}ms` }}
     >
-      {/* Icon */}
       <div className={`voter-scrutin-icon ${
-        hasVoted ? 'voter-scrutin-icon-done' : active ? 'voter-scrutin-icon-active' : 'voter-scrutin-icon-closed'
+        hasVoted ? 'voter-scrutin-icon-done'
+        : active ? 'voter-scrutin-icon-active'
+        : 'voter-scrutin-icon-closed'
       }`}>
-        {hasVoted
-          ? <CheckSquare size={17} strokeWidth={2} />
-          : <Vote size={17} strokeWidth={2} />
-        }
+        {hasVoted ? <CheckSquare size={17} strokeWidth={2} /> : <Vote size={17} strokeWidth={2} />}
       </div>
 
-      {/* Info */}
       <div className="min-w-0 flex-1">
         <p className="truncate text-[13px] font-bold text-slate-800">{election.titre}</p>
-        <p className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-400">
-          <Clock size={9} />
-          {election.date}
-        </p>
+        {active && election.started_at ? (
+          <Countdown startedAt={election.started_at} />
+        ) : (
+          <p className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-400">
+            <Clock size={9} />{election.date}
+          </p>
+        )}
       </div>
 
-      {/* Status + CTA */}
       <div className="flex shrink-0 items-center gap-2">
         {hasVoted ? (
-          <span className="badge badge-green">
-            <CheckSquare size={9} />Voté
-          </span>
+          <span className="badge badge-green"><CheckSquare size={9} />Voté</span>
         ) : active ? (
           <button onClick={onVote} className="voter-vote-btn">
             Voter <ArrowRight size={12} />
@@ -69,40 +93,67 @@ function MiniStat({ value, label, icon: Icon, color }) {
   );
 }
 
+/* ── Badge statut candidature ── */
+const CAND_STATUS = {
+  en_attente: { label: 'En attente',  cls: 'badge-amber', icon: AlertCircle  },
+  valide:     { label: 'Validée',     cls: 'badge-green', icon: CheckCircle2 },
+  refuse:     { label: 'Refusée',     cls: 'badge-red',   icon: XCircle      },
+};
+
+function CandidatureCard({ c }) {
+  const st = CAND_STATUS[c.status] ?? CAND_STATUS.en_attente;
+  const Icon = st.icon;
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white p-3">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13px] font-bold text-slate-800">{c.position}</p>
+        {c.slogan && (
+          <p className="mt-0.5 truncate text-[10px] italic text-slate-400">« {c.slogan} »</p>
+        )}
+      </div>
+      <span className={`badge ${st.cls} shrink-0`}>
+        <Icon size={9} />{st.label}
+      </span>
+    </div>
+  );
+}
+
+/* ── Main page ── */
 export default function VoterDashboard() {
-  const navigate                = useNavigate();
+  const navigate  = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const [loading, setLoading]   = useState(true);
-  const [elections, setElections] = useState([]);
-  const [votedIds, setVotedIds] = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [elections,     setElections]     = useState([]);
+  const [votedIds,      setVotedIds]      = useState([]);
+  const [candidatures,  setCandidatures]  = useState([]);
 
   useEffect(() => {
     (async () => {
       try {
-        const [posRes, votesRes] = await Promise.all([
+        const [posRes, votesRes, candRes] = await Promise.all([
           api.get('/positions'),
           api.get('/votes/my'),
+          api.get('/my-candidatures'),
         ]);
-        const voted = Array.isArray(votesRes.data)
-          ? votesRes.data.map((v) => v.position_id)
-          : [];
+        const voted = Array.isArray(votesRes.data) ? votesRes.data.map((v) => v.position_id) : [];
         setVotedIds(voted);
         if (posRes.data?.success) {
-          const active = (posRes.data.data || [])
-            .filter((p) => p.is_active == 1)
-            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-            .map((p) => ({
-              id:       p.id,
-              titre:    p.title,
-              is_active: p.is_active,
-              date:     p.updated_at
-                ? new Date(p.updated_at).toLocaleDateString('fr-FR', {
-                    day: 'numeric', month: 'short',
-                  })
-                : '—',
-            }));
-          setElections(active);
+          setElections(
+            (posRes.data.data || [])
+              .filter((p) => p.is_active == 1)
+              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+              .map((p) => ({
+                id:         p.id,
+                titre:      p.title,
+                is_active:  p.is_active,
+                started_at: p.started_at,
+                date:       p.updated_at
+                  ? new Date(p.updated_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+                  : '—',
+              }))
+          );
         }
+        if (candRes.data?.success) setCandidatures(candRes.data.data || []);
       } finally { setLoading(false); }
     })();
   }, []);
@@ -110,7 +161,6 @@ export default function VoterDashboard() {
   const completed = elections.filter((e) => votedIds.includes(e.id)).length;
   const remaining = elections.length - completed;
   const percent   = elections.length ? Math.round((completed / elections.length) * 100) : 0;
-  const fullName  = user ? `${user.first_name} ${user.last_name}` : '';
 
   const handleVote = () => navigate('/voterBallot');
 
@@ -126,11 +176,11 @@ export default function VoterDashboard() {
     <VoterLayout activePage="dashboard">
       <div className="voter-page-wrapper">
 
-        {/* ── Welcome banner ── */}
+        {/* Welcome */}
         <div className="voter-welcome-banner animate-fade-up">
           <div>
             <p className="voter-welcome-greeting">
-              Bonjour{fullName ? `, ${user.first_name}` : ''}
+              Bonjour{user?.first_name ? `, ${user.first_name}` : ''}
             </p>
             <h1 className="voter-welcome-title">Votre espace électoral</h1>
           </div>
@@ -140,29 +190,14 @@ export default function VoterDashboard() {
           </div>
         </div>
 
-        {/* ── Mini stats ── */}
+        {/* Mini stats */}
         <div className="voter-stats-row animate-fade-up delay-50">
-          <MiniStat
-            value={elections.length}
-            label="Scrutins ouverts"
-            icon={Zap}
-            color="voter-mini-stat-emerald"
-          />
-          <MiniStat
-            value={completed}
-            label="Votes émis"
-            icon={CheckSquare}
-            color="voter-mini-stat-blue"
-          />
-          <MiniStat
-            value={`${percent}%`}
-            label="Progression"
-            icon={Trophy}
-            color="voter-mini-stat-violet"
-          />
+          <MiniStat value={elections.length}   label="Scrutins ouverts" icon={Zap}        color="voter-mini-stat-emerald" />
+          <MiniStat value={completed}           label="Votes émis"       icon={CheckSquare} color="voter-mini-stat-blue"   />
+          <MiniStat value={`${percent}%`}       label="Progression"      icon={Trophy}      color="voter-mini-stat-violet" />
         </div>
 
-        {/* ── Progress card ── */}
+        {/* Progress */}
         <div className="content-card p-5 animate-fade-up delay-100">
           <div className="flex items-center justify-between gap-4 mb-4">
             <div>
@@ -187,16 +222,12 @@ export default function VoterDashboard() {
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600
-                transition-all duration-1000 ease-out"
+              className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-1000 ease-out"
               style={{ width: `${percent}%` }}
             />
           </div>
           {remaining > 0 && (
-            <button
-              onClick={handleVote}
-              className="voter-cta-btn mt-4"
-            >
+            <button onClick={handleVote} className="voter-cta-btn mt-4">
               <Vote size={15} />
               Accéder au bulletin de vote
               <ArrowRight size={14} className="ml-auto" />
@@ -204,75 +235,66 @@ export default function VoterDashboard() {
           )}
         </div>
 
-        {/* ── Scrutins list ── */}
+        {/* Scrutins */}
         <div className="content-card animate-fade-up delay-150">
           <div className="content-card-header">
             <div>
               <p className="text-sm font-bold text-slate-800">Scrutins disponibles</p>
-              <p className="mt-0.5 text-xs text-slate-400">
-                {elections.length} ouvert{elections.length > 1 ? 's' : ''}
-              </p>
+              <p className="mt-0.5 text-xs text-slate-400">{elections.length} ouvert{elections.length > 1 ? 's' : ''}</p>
             </div>
-            {elections.length > 0 && (
-              <span className="badge badge-green"><Zap size={9} />Live</span>
-            )}
+            {elections.length > 0 && <span className="badge badge-green"><Zap size={9} />Live</span>}
           </div>
-
           <div className="p-4 space-y-2">
             {elections.length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-16 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl
-                  border-2 border-dashed border-slate-200 bg-slate-50">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50">
                   <Vote size={22} className="text-slate-300" />
                 </div>
                 <p className="text-sm font-semibold text-slate-500">Aucun scrutin ouvert</p>
                 <p className="text-xs text-slate-400">Revenez plus tard.</p>
               </div>
-            ) : (
-              elections.map((el, i) => (
-                <ScrutinRow
-                  key={el.id}
-                  election={el}
-                  index={i}
-                  hasVoted={votedIds.includes(el.id)}
-                  onVote={handleVote}
-                />
-              ))
-            )}
+            ) : elections.map((el, i) => (
+              <ScrutinRow key={el.id} election={el} index={i}
+                hasVoted={votedIds.includes(el.id)} onVote={handleVote} />
+            ))}
           </div>
-
           <div className="flex items-center gap-2 border-t border-slate-100 px-5 py-3">
             <ShieldCheck size={12} className="text-emerald-500" />
             <p className="text-[10px] text-slate-400">Votes anonymisés · Registre audité CTS</p>
           </div>
         </div>
 
-        {/* ── Quick actions ── */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 animate-fade-up delay-200">
-          <button
-            onClick={() => navigate('/candidature')}
-            className="voter-quick-action voter-quick-action-green"
-          >
-            <div className="voter-quick-action-icon bg-emerald-100 text-emerald-600">
-              <FilePlus size={18} />
+        {/* Statut candidatures (D) */}
+        {candidatures.length > 0 && (
+          <div className="content-card animate-fade-up delay-200">
+            <div className="content-card-header">
+              <div>
+                <p className="text-sm font-bold text-slate-800">Mes candidatures</p>
+                <p className="mt-0.5 text-xs text-slate-400">{candidatures.length} soumise{candidatures.length > 1 ? 's' : ''}</p>
+              </div>
+              <span className="badge badge-slate"><FilePlus size={9} />Candidatures</span>
             </div>
+            <div className="p-4 space-y-2">
+              {candidatures.map((c) => <CandidatureCard key={c.id} c={c} />)}
+            </div>
+          </div>
+        )}
+
+        {/* Quick actions */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 animate-fade-up delay-200">
+          <button onClick={() => navigate('/candidature')} className="voter-quick-action">
+            <div className="voter-quick-action-icon bg-emerald-100 text-emerald-600"><FilePlus size={18} /></div>
             <div className="text-left">
               <p className="text-sm font-bold text-slate-800">Déposer ma candidature</p>
               <p className="text-[11px] text-slate-400">Postuler pour un poste</p>
             </div>
             <ChevronRight size={15} className="ml-auto text-slate-300" />
           </button>
-
-          <button
-            onClick={() => navigate('/voterHistory')}
-            className="voter-quick-action voter-quick-action-blue"
-          >
-            <div className="voter-quick-action-icon bg-blue-50 text-blue-500">
-              <CheckSquare size={18} />
-            </div>
+          <button onClick={() => navigate('/voterHistory')} className="voter-quick-action">
+            <div className="voter-quick-action-icon bg-blue-50 text-blue-500"><CheckSquare size={18} /></div>
             <div className="text-left">
               <p className="text-sm font-bold text-slate-800">Mes votes</p>
-              <p className="text-[11px] text-slate-400">Historique &amp; reçus PDF</p>
+              <p className="text-[11px] text-slate-400">Historique & reçus</p>
             </div>
             <ChevronRight size={15} className="ml-auto text-slate-300" />
           </button>

@@ -33,6 +33,31 @@ class AdminController extends Controller
 
     // ─── Private ──────────────────────────────────────────────────────────────
 
+    /**
+     * Journal d'audit — 100 dernières entrées.
+     */
+    public function auditLogs(): JsonResponse
+    {
+        $logs = \App\Models\AuditLog::with('user:id,first_name,last_name,email')
+            ->orderByDesc('created_at')
+            ->limit(100)
+            ->get()
+            ->map(fn ($l) => [
+                'id'          => $l->id,
+                'action'      => $l->action,
+                'target_type' => $l->target_type,
+                'target_id'   => $l->target_id,
+                'metadata'    => $l->metadata,
+                'ip_address'  => $l->ip_address,
+                'created_at'  => $l->created_at?->toIso8601String(),
+                'admin'       => $l->user
+                    ? $l->user->first_name . ' ' . $l->user->last_name
+                    : 'Système',
+            ]);
+
+        return response()->json(['success' => true, 'data' => $logs]);
+    }
+
     private function computeStats(): array
     {
         $totalInscrits      = User::where('role', 'electeur')->count();

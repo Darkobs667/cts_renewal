@@ -60,6 +60,7 @@ export default function SignUp() {
         password_confirmation: form.password,
         code:                  null,
         browserId,
+        website:               '',   // honeypot — les bots remplissent ce champ
       });
 
       if (res?.error || res?.errors) {

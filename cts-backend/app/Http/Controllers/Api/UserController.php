@@ -13,19 +13,39 @@ use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $users = User::select('id', 'first_name', 'last_name', 'email', 'role', 'status')
-            ->get()
-            ->map(fn (User $user) => [
+        $perPage = min(max($request->integer('per_page', 50), 10), 100);
+        $search  = $request->get('search', '');
+
+        $query = User::select('id', 'first_name', 'last_name', 'email', 'role', 'status');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name',  'like', "%{$search}%")
+                  ->orWhere('email',      'like', "%{$search}%");
+            });
+        }
+
+        $paginated = $query->paginate($perPage);
+
+        return response()->json([
+            'success' => true,
+            'data'    => collect($paginated->items())->map(fn (User $user) => [
                 'id'     => $user->id,
                 'nom'    => trim($user->first_name . ' ' . $user->last_name),
                 'email'  => $user->email,
                 'role'   => $user->role,
                 'status' => $user->status ?? 'Validé',
-            ]);
-
-        return response()->json(['success' => true, 'data' => $users]);
+            ]),
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page'    => $paginated->lastPage(),
+                'per_page'     => $paginated->perPage(),
+                'total'        => $paginated->total(),
+            ],
+        ]);
     }
 
     /**
@@ -41,6 +61,11 @@ class UserController extends Controller
         $user = User::findOrFail($id);
         $user->status = $request->status;
         $user->save();
+
+        \App\Models\AuditLog::record('user.status_update', 'User', $user->id, [
+            'status' => $request->status,
+            'email'  => $user->email,
+        ]);
 
         return response()->json([
             'success' => true,

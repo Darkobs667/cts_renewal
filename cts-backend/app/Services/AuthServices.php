@@ -21,8 +21,11 @@ class AuthServices
     {
         $browserId = trim($data['browserId'] ?? '');
 
-        // Unicité du browserId seulement s'il est renseigné.
-        if ($browserId !== '' && User::where('browserId', $browserId)->exists()) {
+        // Hacher le browserId avant stockage (données de tracking — ne pas stocker en clair)
+        $hashedBrowserId = $browserId !== '' ? hash_hmac('sha256', $browserId, config('app.key')) : null;
+
+        // Unicité du browserId haché seulement s'il est renseigné.
+        if ($hashedBrowserId !== null && User::where('browserId', $hashedBrowserId)->exists()) {
             return ['errors' => 'Un compte existe déjà sur cet appareil.'];
         }
 
@@ -37,7 +40,7 @@ class AuthServices
                 'last_name'  => $data['last_name'],
                 'code'       => $data['code'] ?? null,
                 'email'      => strtolower(trim($data['email'])),
-                'browserId'  => $browserId !== '' ? $browserId : null,
+                'browserId'  => $hashedBrowserId,
                 'password'   => Hash::make($data['password']),
             ]);
 

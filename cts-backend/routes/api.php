@@ -21,7 +21,7 @@ Route::get('/health', function () {
     return response()->json([
         'status'   => 'ok',
         'time'     => now()->toIso8601String(),
-        'memory'   => memory_get_usage(),
+        // memory_get_usage() retiré — info système sensible non nécessaire publiquement
         'database' => DB::connection()->getPdo() ? 'connected' : 'error',
     ]);
 });
@@ -61,6 +61,7 @@ Route::middleware('auth:api')->group(function () {
 
     // Stats globales (admin)
     Route::get('/admin/stats-globales', [AdminController::class, 'getStats'])->middleware('admin');
+    Route::get('/admin/audit-logs',     [AdminController::class, 'auditLogs'])->middleware('admin');
 
     // Résultats complets et export PDF — admin seulement
     Route::get('/votes/results/all', [VoteController::class, 'allResults'])->middleware(['admin', 'throttle:results']);
@@ -94,7 +95,8 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/votes/batch',               [VoteController::class, 'batchStore'])->middleware(['electeur', 'throttle:vote']);
     Route::get('/votes/my',                   [VoteController::class, 'myVotes'])->middleware('electeur');
     Route::get('/votes/check/{positionId}',   [VoteController::class, 'checkVote'])->middleware('electeur');
+    // receipt retiré — impression navigateur côté frontend, pas de PDF serveur électeur
 
-    // Reçu de vote — électeur (impression navigateur côté frontend, pas de PDF serveur)
-    Route::get('/voter/receipt/{voteId}',     [VoteController::class, 'receipt'])->middleware('electeur');
+    // Statut candidature de l'électeur connecté
+    Route::get('/my-candidatures',            [CandidateController::class, 'myCandidatures'])->middleware('electeur');
 });
