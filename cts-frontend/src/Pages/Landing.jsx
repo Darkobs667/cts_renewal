@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import {
   ArrowRight, Camera, CheckCircle2, ChevronDown,
-  FilePlus, Lock, Shield, Upload, Users, Vote, X, Loader2,
+  FilePlus, Lock, Shield, Trophy, Upload, Users, Vote, X, Loader2,
 } from 'lucide-react';
 import logocts from '../assets/logo-cts2-removebg-preview.png';
 import api from '../services/api';
