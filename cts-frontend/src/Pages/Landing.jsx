@@ -5,8 +5,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import {
-  ArrowRight, Camera, CheckCircle2, ChevronDown,
-  FilePlus, Lock, Shield, Trophy, Upload, Users, Vote, X, Loader2,
+  ArrowRight, BookOpen, Camera, CheckCircle2, ChevronDown,
+  ClipboardList, Crown, FilePlus, Globe, Handshake,
+  Lock, MessageSquare, Shield, Trophy,
+  Upload, Users, Vote, X, Loader2,
 } from 'lucide-react';
 import logocts from '../assets/logo-cts2-removebg-preview.png';
 import api from '../services/api';
@@ -16,42 +18,42 @@ import toast from 'react-hot-toast';
 const POSTES = [
   {
     titre: 'Président(e)',
-    emoji: '👑',
+    Icon: Crown,
     role: 'Représente le club, coordonne les activités, assure la vision stratégique et porte la voix du CTS auprès des instances de l\'université.',
     couleur: 'from-amber-50 to-yellow-50 border-amber-200',
     iconColor: 'text-amber-600 bg-amber-100',
   },
   {
     titre: 'Vice-Coordinateur(trice) — Vice-Président(e)',
-    emoji: '🤝',
+    Icon: Handshake,
     role: 'Seconde le président, coordonne les équipes internes, assure la continuité des projets et prend la relève en cas d\'absence.',
     couleur: 'from-blue-50 to-indigo-50 border-blue-200',
     iconColor: 'text-blue-600 bg-blue-100',
   },
   {
     titre: 'Responsable Organisation',
-    emoji: '📋',
+    Icon: ClipboardList,
     role: 'Planifie et organise les événements, ateliers, CTF et hackathons. Gère la logistique des activités du club.',
     couleur: 'from-emerald-50 to-green-50 border-emerald-200',
     iconColor: 'text-emerald-600 bg-emerald-100',
   },
   {
     titre: 'Responsable Pédagogie',
-    emoji: '📚',
+    Icon: BookOpen,
     role: 'Conçoit les programmes de formation, organise les sessions d\'apprentissage et veille au développement des compétences des membres.',
     couleur: 'from-violet-50 to-purple-50 border-violet-200',
     iconColor: 'text-violet-600 bg-violet-100',
   },
   {
     titre: 'Responsable Communication',
-    emoji: '📢',
+    Icon: MessageSquare,
     role: 'Gère la présence en ligne du club, produit les contenus visuels, anime les réseaux sociaux et assure la visibilité du CTS.',
     couleur: 'from-rose-50 to-pink-50 border-rose-200',
     iconColor: 'text-rose-600 bg-rose-100',
   },
   {
     titre: 'Adjoint(e) Responsable Relations Extérieures',
-    emoji: '🌐',
+    Icon: Globe,
     role: 'Développe les partenariats avec d\'autres clubs, entreprises tech et institutions. Représente le club lors d\'événements externes.',
     couleur: 'from-cyan-50 to-teal-50 border-cyan-200',
     iconColor: 'text-cyan-600 bg-cyan-100',
@@ -351,7 +353,7 @@ export default function Landing() {
             {POSTES.map((p) => (
               <div key={p.titre} className={`land-poste-card bg-gradient-to-br ${p.couleur}`}>
                 <div className={`land-poste-icon ${p.iconColor}`}>
-                  <span className="text-2xl">{p.emoji}</span>
+                  <p.Icon size={22} strokeWidth={1.75} />
                 </div>
                 <h3 className="land-poste-title">{p.titre}</h3>
                 <p className="land-poste-desc">{p.role}</p>
