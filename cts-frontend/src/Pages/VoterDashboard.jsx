@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Vote, CheckSquare, ArrowRight, ShieldCheck,
-  FilePlus, Trophy, Clock, Zap, ChevronRight,
+  Trophy, Clock, Zap, ChevronRight,
   CheckCircle2, XCircle, AlertCircle, Timer,
 } from 'lucide-react';
 import VoterLayout from '../Components/VoterLayout';
@@ -282,19 +282,19 @@ export default function VoterDashboard() {
 
         {/* Quick actions */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 animate-fade-up delay-200">
-          <button onClick={() => navigate('/candidature')} className="voter-quick-action">
-            <div className="voter-quick-action-icon bg-emerald-100 text-emerald-600"><FilePlus size={18} /></div>
-            <div className="text-left">
-              <p className="text-sm font-bold text-slate-800">Déposer ma candidature</p>
-              <p className="text-[11px] text-slate-400">Postuler pour un poste</p>
-            </div>
-            <ChevronRight size={15} className="ml-auto text-slate-300" />
-          </button>
           <button onClick={() => navigate('/voterHistory')} className="voter-quick-action">
             <div className="voter-quick-action-icon bg-blue-50 text-blue-500"><CheckSquare size={18} /></div>
             <div className="text-left">
               <p className="text-sm font-bold text-slate-800">Mes votes</p>
               <p className="text-[11px] text-slate-400">Historique & reçus</p>
+            </div>
+            <ChevronRight size={15} className="ml-auto text-slate-300" />
+          </button>
+          <button onClick={() => navigate('/voterBallot')} className="voter-quick-action">
+            <div className="voter-quick-action-icon bg-emerald-100 text-emerald-600"><Vote size={18} /></div>
+            <div className="text-left">
+              <p className="text-sm font-bold text-slate-800">Accéder au vote</p>
+              <p className="text-[11px] text-slate-400">Bulletin de vote</p>
             </div>
             <ChevronRight size={15} className="ml-auto text-slate-300" />
           </button>

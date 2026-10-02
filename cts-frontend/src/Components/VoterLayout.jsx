@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
   LayoutDashboard, Vote, CheckCircle2,
-  LogOut, X, FilePlus,
+  LogOut, X,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import Logocts from '../assets/logo-cts2-removebg-preview.png';
@@ -12,9 +12,8 @@ import Logocts from '../assets/logo-cts2-removebg-preview.png';
    dans la navigation principale).
    ───────────────────────────────────────────────────────────────────────── */
 const MENU = [
-  { id: 'dashboard',   to: '/voterDashboard', label: 'Accueil',   icon: LayoutDashboard },
-  { id: 'candidature', to: '/candidature',    label: 'Postuler',  icon: FilePlus        },
-  { id: 'votes',       to: '/voterHistory',   label: 'Mes votes', icon: CheckCircle2    },
+  { id: 'dashboard', to: '/voterDashboard', label: 'Accueil',   icon: LayoutDashboard },
+  { id: 'votes',     to: '/voterHistory',   label: 'Mes votes', icon: CheckCircle2    },
 ];
 
 /* ── Sidebar nav item (desktop ≥ 768px) ── */
