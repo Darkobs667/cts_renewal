@@ -22,6 +22,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // ── Modèles strict en production (pas en dev pour éviter les warnings) ──
+        if ($this->app->isProduction()) {
+            \Illuminate\Database\Eloquent\Model::shouldBeStrict(false);
+        }
+
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(60)->by($request->ip());
         });

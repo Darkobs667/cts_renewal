@@ -1,43 +1,103 @@
-server {
-    listen __RENDER_PORT__;
-    server_name _;
-    root /var/www/html/public;
-    index index.php;
-    charset utf-8;
-    server_tokens off;
+# ── Worker processes ──────────────────────────────────────────────────────────
+# auto = utilise tous les vCPU disponibles (2 sur Render free)
+worker_processes auto;
 
-    client_max_body_size 10m;
+events {
+    # Connexions max par worker : 1024 × 2 vCPU = 2048 connexions simultanées
+    worker_connections 1024;
+    # epoll : meilleur I/O multiplexer sur Linux
+    use epoll;
+    multi_accept on;
+}
 
-    # ── Security headers ──────────────────────────────────────────────────────
-    add_header X-Frame-Options            "SAMEORIGIN"                     always;
-    add_header X-Content-Type-Options     "nosniff"                        always;
-    add_header Referrer-Policy            "strict-origin-when-cross-origin" always;
-    add_header X-XSS-Protection           "1; mode=block"                  always;
-    add_header Permissions-Policy         "geolocation=(), microphone=(), camera=()" always;
-    add_header Strict-Transport-Security  "max-age=63072000; includeSubDomains; preload" always;
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
 
-    location ~ /\. {
-        deny all;
+    # ── Performance ──────────────────────────────────────────────────────────
+    sendfile           on;
+    tcp_nopush         on;
+    tcp_nodelay        on;
+    keepalive_timeout  30;
+    keepalive_requests 100;
+
+    # Compression gzip pour les réponses JSON API
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_comp_level 4;
+    gzip_types
+        application/json
+        application/javascript
+        text/plain text/css text/xml
+        application/xml+rss;
+
+    # Limite les logs pour ne pas saturer le disque
+    access_log off;
+    error_log  stderr warn;
+
+    # Cache infos fichiers
+    open_file_cache          max=1000 inactive=20s;
+    open_file_cache_valid    30s;
+    open_file_cache_min_uses 2;
+    open_file_cache_errors   on;
+
+    server {
+        listen __RENDER_PORT__;
+        server_name _;
+        root        /var/www/html/public;
+        index       index.php;
+        charset     utf-8;
+        server_tokens off;
+
+        client_max_body_size    10m;
+        client_body_timeout     12s;
+        client_header_timeout   12s;
+        send_timeout            10s;
+
+        # ── Security headers ─────────────────────────────────────────────────
+        add_header X-Frame-Options            "SAMEORIGIN"                      always;
+        add_header X-Content-Type-Options     "nosniff"                         always;
+        add_header Referrer-Policy            "strict-origin-when-cross-origin" always;
+        add_header X-XSS-Protection           "1; mode=block"                   always;
+        add_header Permissions-Policy         "geolocation=(), microphone=(), camera=()" always;
+        add_header Strict-Transport-Security  "max-age=63072000; includeSubDomains; preload" always;
+
+        # ── Cache statique navigateur ─────────────────────────────────────────
+        location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff2?)$ {
+            expires 30d;
+            add_header Cache-Control "public, immutable";
+            access_log off;
+        }
+
+        # ── Protège les répertoires sensibles ────────────────────────────────
+        location ~ /\. { deny all; }
+        location ~* /(vendor|storage|bootstrap|config|database|resources|tests)/ {
+            deny all;
+        }
+
+        # ── Routes Laravel ───────────────────────────────────────────────────
+        location / {
+            try_files $uri $uri/ /index.php?$query_string;
+        }
+
+        # ── PHP-FPM ──────────────────────────────────────────────────────────
+        location ~ \.php$ {
+            try_files     $uri =404;
+            include       fastcgi_params;
+            fastcgi_pass  127.0.0.1:9000;
+            fastcgi_index index.php;
+            fastcgi_param SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+            fastcgi_param DOCUMENT_ROOT    $document_root;
+            fastcgi_read_timeout           30s;
+            fastcgi_connect_timeout        5s;
+            fastcgi_send_timeout           10s;
+            # Buffer FastCGI pour éviter les I/O bloquants
+            fastcgi_buffer_size            16k;
+            fastcgi_buffers                4 16k;
+        }
+
+        location = /favicon.ico { access_log off; log_not_found off; }
+        location = /robots.txt  { access_log off; log_not_found off; }
     }
-
-    location ~* /(vendor|storage|bootstrap|config|database|resources|tests)/ {
-        deny all;
-    }
-
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
-
-    location ~ \.php$ {
-        try_files $uri =404;
-        include fastcgi_params;
-        fastcgi_pass 127.0.0.1:9000;
-        fastcgi_index index.php;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        fastcgi_param DOCUMENT_ROOT $document_root;
-        fastcgi_read_timeout 60s;
-    }
-
-    location = /favicon.ico { access_log off; log_not_found off; }
-    location = /robots.txt { access_log off; log_not_found off; }
 }

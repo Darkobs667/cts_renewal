@@ -23,6 +23,7 @@ RUN apk add --no-cache \
         gd \
         intl \
         mbstring \
+        opcache \
         pdo_mysql \
         pdo_pgsql \
         pgsql \
@@ -52,6 +53,15 @@ RUN printf '%s\n' \
       'upload_max_filesize = 10M' \
       'post_max_size = 10M' \
       'max_execution_time = 60' \
+      'opcache.enable = 1' \
+      'opcache.enable_cli = 0' \
+      'opcache.memory_consumption = 128' \
+      'opcache.interned_strings_buffer = 16' \
+      'opcache.max_accelerated_files = 10000' \
+      'opcache.revalidate_freq = 0' \
+      'opcache.validate_timestamps = 0' \
+      'opcache.save_comments = 1' \
+      'opcache.fast_shutdown = 1' \
       > /usr/local/etc/php/conf.d/render.ini \
     && chmod +x /var/www/html/docker/start.sh
 

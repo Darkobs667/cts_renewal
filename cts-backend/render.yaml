@@ -1,14 +1,23 @@
 # render.yaml
+# ── Déploiement CTS Backend ───────────────────────────────────────────────────
+#
+# NOTE sur la capacité :
+#   - Free tier (512 MB RAM, 2 vCPU) : suffit pour ~300 électeurs en pic.
+#   - Pour 1000+ users simultanés : passer au plan Starter ($7/mois) qui donne
+#     1 GB RAM + 2x vCPU + possibilité de numInstances=2.
+#   - Redis Upstash (gratuit) peut remplacer le cache database pour 10× plus
+#     de débit sur le rate-limiting.
+#
 services:
   - type: web
     name: cts-backend
     runtime: docker
-    repo: https://github.com/Darkobs667/cts-backend
-    branch: rollback-backend-hier-12h
+    repo: https://github.com/Darkobs667/cts_renewal
+    branch: main
     plan: free
     healthCheckPath: /api/health
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    dockerfilePath: ./cts-backend/Dockerfile
+    dockerContext: ./cts-backend
     envVars:
       - key: APP_ENV
         value: production
@@ -32,8 +41,14 @@ services:
         value: cts/candidates
       - key: CANDIDATE_PHOTO_STORAGE
         value: cloudinary
+      # Cache database : partagé entre instances, atomique pour le rate-limiting.
+      # Migrer vers Redis Upstash (CACHE_STORE=redis) pour ×10 perf si besoin.
       - key: CACHE_STORE
         value: database
       - key: CACHE_LIMITER
         value: database
+      - key: FRONTEND_URL
+        sync: false
     numInstances: 1
+    # Pour scaler : passer numInstances à 2 et plan à starter
+    # Les caches sont en base (partagée) donc multi-instance safe.
