@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Vote, CheckSquare, ArrowRight, ShieldCheck,
-  Trophy, Clock, Zap, ChevronRight,
+  FilePlus, Trophy, Clock, Zap, ChevronRight,
   CheckCircle2, XCircle, AlertCircle, Timer,
 } from 'lucide-react';
 import VoterLayout from '../Components/VoterLayout';
