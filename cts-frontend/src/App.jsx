@@ -20,6 +20,7 @@ const AdminresultsPage= lazy(() => import('./Pages/adminresult.jsx'));
 const ElecteurScrutins= lazy(() => import('./Pages/ElecteurScrutins.jsx'));
 const AdminCandidatures=lazy(() => import('./Pages/AdminCandidatures.jsx'));
 const CandidatureForm = lazy(() => import('./Pages/CandidatureForm.jsx'));
+const AuditLogPage    = lazy(() => import('./Pages/AuditLog.jsx'));
 
 function AppContent() {
     return (
@@ -73,6 +74,9 @@ function AppContent() {
             } />
             <Route path="/adminresultsPage" element={
                 <ProtectedRoute allowedRole="admin"><AdminresultsPage /></ProtectedRoute>
+            } />
+            <Route path="/audit-log" element={
+                <ProtectedRoute allowedRole="admin"><AuditLogPage /></ProtectedRoute>
             } />
 
             <Route path="*" element={<Navigate to="/" replace />} />

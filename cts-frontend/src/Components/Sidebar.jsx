@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Users, Vote, UserCheck,
-  MailOpen, BarChart2, LogOut, X,
+  MailOpen, BarChart2, ClipboardList, LogOut, X,
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useState } from 'react';
@@ -8,12 +8,13 @@ import { useAuth } from '../hooks/useAuth';
 import Logocts from '../assets/logo-cts2-removebg-preview.png';
 
 const MENU = [
-  { id: 'dashboard',        to: '/admin',            label: 'Tableau de bord',       icon: LayoutDashboard },
-  { id: 'electeurs',        to: '/electeurs',        label: 'Électeurs',              icon: Users           },
-  { id: 'votes',            to: '/votes-elections',  label: 'Scrutins',               icon: Vote            },
-  { id: 'parametres',       to: '/candidats',        label: 'Candidats',              icon: UserCheck       },
-  { id: 'candidatures',     to: '/candidatures',     label: 'Candidatures',           icon: MailOpen        },
-  { id: 'adminresultsPage', to: '/adminresultsPage', label: 'Résultats',              icon: BarChart2       },
+  { id: 'dashboard',        to: '/admin',            label: 'Tableau de bord',  icon: LayoutDashboard },
+  { id: 'electeurs',        to: '/electeurs',        label: 'Électeurs',         icon: Users           },
+  { id: 'votes',            to: '/votes-elections',  label: 'Scrutins',          icon: Vote            },
+  { id: 'parametres',       to: '/candidats',        label: 'Candidats',         icon: UserCheck       },
+  { id: 'candidatures',     to: '/candidatures',     label: 'Candidatures',      icon: MailOpen        },
+  { id: 'adminresultsPage', to: '/adminresultsPage', label: 'Résultats',         icon: BarChart2       },
+  { id: 'audit-log',        to: '/audit-log',        label: 'Journal d\'audit',  icon: ClipboardList   },
 ];
 
 function NavItem({ item, active }) {

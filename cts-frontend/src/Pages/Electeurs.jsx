@@ -62,7 +62,7 @@ export default function Electeurs() {
         toast.success('Électeur supprimé.');
       } else {
         const res = await api.put(`/users/${confirmation.id}/reset-password`);
-        setTmpPassword(res.data.new_password);
+        setTmpPassword(res.data.temporary_password ?? '(non disponible)');
       }
       setConfirmation(null);
     } catch {
