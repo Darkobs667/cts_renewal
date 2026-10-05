@@ -29,7 +29,8 @@ class AuthController extends Controller
             'code'       => 'nullable|string|max:100|unique:users,code',
             'email'      => ['required', 'string', 'email:rfc', 'max:255', 'regex:/^[^@\\s]+@uadb\\.edu\\.sn$/i', 'unique:users,email'],
             'password'   => 'required|string|min:12|confirmed',
-            'browserId'  => 'required|string|max:255',
+            // browserId est optionnel — peut être vide si FingerprintJS échoue côté client
+            'browserId'  => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {

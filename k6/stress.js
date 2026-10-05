@@ -50,7 +50,7 @@ export default function () {
   http.post(`${BASE_URL}/register`, JSON.stringify({
     first_name: 'Stress', last_name: `${__VU}`,
     email, password: VU_PWD, password_confirmation: VU_PWD,
-    browserId: `stress_${__VU}`, website: '',
+    browserId: `k6-stress-${__VU}`, website: '',
   }), { headers });
 
   // Login

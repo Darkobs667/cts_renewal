@@ -61,16 +61,15 @@ export default function () {
   const reg   = http.post(`${BASE_URL}/register`, JSON.stringify({
     first_name: 'Test', last_name: 'User',
     email, password: pwd, password_confirmation: pwd,
-    browserId: '', website: '',
+    browserId: 'k6-test-browser', website: '',
   }), { headers });
   check(reg, {
-    // Accepter 201 (créé) OU 409 (email déjà existant entre runs)
     'register: 201 ou 409': (r) => r.status === 201 || r.status === 409,
     'register: pas de 5xx': (r) => r.status < 500,
   });
-
-  // Si 409 (compte déjà créé lors d'un run précédent), on utilise le même mdp
-  // Le mot de passe est identique donc le login fonctionnera quand même
+  if (reg.status !== 201 && reg.status !== 409) {
+    console.log(`Register failed (${reg.status}): ${reg.body.substring(0, 300)}`);
+  }
   sleep(0.5);
 
   // ── 4. Login électeur ─────────────────────────────────────

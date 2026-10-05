@@ -83,7 +83,7 @@ export default function () {
     http.post(`${BASE_URL}/register`, JSON.stringify({
       first_name: 'DV', last_name: `${__VU}`,
       email, password: pwd, password_confirmation: pwd,
-      browserId: `dv_${__VU}`, website: '',
+      browserId: `k6-dv-${__VU}-${__ITER}`, website: '',
     }), { headers });
 
     const login = http.post(`${BASE_URL}/login`,

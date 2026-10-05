@@ -64,7 +64,7 @@ export default function () {
     http.post(`${BASE_URL}/register`, JSON.stringify({
       first_name: 'Electeur', last_name:  `${vuIndex + 1}`,
       email, password: VU_PASSWORD, password_confirmation: VU_PASSWORD,
-      browserId: `vu_${__VU}`, website: '',
+      browserId: `k6-vu-${__VU}`, website: '',
     }), { headers });
 
     sleep(0.3);
