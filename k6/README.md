@@ -37,6 +37,7 @@ sudo apt-get update && sudo apt-get install k6
 | Script | Objectif | Durée | VUs max |
 |---|---|---|---|
 | `smoke.js`    | Vérifier que tout fonctionne (1 user) | 1 min | 1 |
+| `setup.js`    | Pré-créer les comptes de test | ~35 min | 1 |
 | `load.js`     | Simulation jour de vote (flux complet) | 30 min | 100 |
 | `stress.js`   | Trouver le point de rupture | 10 min | 200 |
 | `spike.js`    | Pic d'ouverture soudain | ~4 min | 100 |
@@ -46,52 +47,61 @@ sudo apt-get update && sudo apt-get install k6
 
 ## Utilisation
 
+### Ordre recommandé
+
+```
+1. smoke.js    → valider que l'app répond
+2. security.js → valider que les protections fonctionnent
+3. setup.js    → pré-créer les comptes de test (fait une seule fois)
+4. load.js     → simuler le jour de vote
+5. stress.js   → trouver le point de rupture
+6. spike.js    → tester la résistance aux pics
+```
+
+### Pourquoi setup.js est nécessaire ?
+
+Le rate limiting protège `/register` à **3 inscriptions/heure/IP**.
+Avec 100 VUs depuis la même machine → bloqué après 3 requêtes.
+`setup.js` crée les comptes lentement (1 toutes les 22s) pour rester
+sous la limite, puis `load.js` réutilise ces comptes existants.
+
+### Version rapide (3 comptes seulement)
+```bash
+k6 run k6/setup.js -e BASE_URL=https://cts-backend-1.onrender.com/api -e TOTAL=3
+# Attendre 1h puis relancer avec les 3 suivants
+k6 run k6/setup.js -e BASE_URL=... -e TOTAL=3 --env-file offset=3
+```
+
 ### Tester en local (backend doit tourner)
 ```bash
-# Démarrer le backend
 cd cts-backend && php artisan serve
 
-# Dans un autre terminal
+# Smoke
 k6 run k6/smoke.js -e BASE_URL=http://localhost:8000/api
+
+# Setup rapide en local (pas de rate limit sur localhost)
+k6 run k6/setup.js -e BASE_URL=http://localhost:8000/api -e TOTAL=100
+# Puis load test
+k6 run k6/load.js  -e BASE_URL=http://localhost:8000/api
 ```
 
 ### Tester en production
 ```bash
-# Smoke test d'abord (toujours commencer par là)
+# Smoke
 k6 run k6/smoke.js \
   -e BASE_URL=https://cts-backend-1.onrender.com/api \
   -e ADMIN_EMAIL=admin@uadb.edu.sn \
   -e ADMIN_PASSWORD=VotreMotDePasse
 
-# Si smoke OK → load test
-k6 run k6/load.js \
-  -e BASE_URL=https://cts-backend-1.onrender.com/api
+# Security
+k6 run k6/security.js -e BASE_URL=https://cts-backend-1.onrender.com/api
 
-# Test sécurité
-k6 run k6/security.js \
-  -e BASE_URL=https://cts-backend-1.onrender.com/api \
-  -e ADMIN_EMAIL=admin@uadb.edu.sn \
-  -e ADMIN_PASSWORD=VotreMotDePasse
+# Setup (une seule fois, ~35min pour 100 comptes)
+k6 run k6/setup.js -e BASE_URL=https://cts-backend-1.onrender.com/api
+
+# Load (après setup)
+k6 run k6/load.js -e BASE_URL=https://cts-backend-1.onrender.com/api
 ```
-
-### Avec sortie HTML (nécessite k6-reporter)
-```bash
-k6 run k6/load.js --out json=k6/reports/load-raw.json
-```
-
----
-
-## Ordre recommandé
-
-```
-1. smoke.js    → valider que l'app répond
-2. security.js → valider que les protections fonctionnent  
-3. load.js     → simuler le jour de vote
-4. stress.js   → trouver le point de rupture
-5. spike.js    → tester la résistance aux pics
-```
-
-**Ne jamais lancer stress.js ou spike.js en production sans prévenir.** Ces tests peuvent déclencher le rate limiting sur les vraies adresses IP.
 
 ---
 
