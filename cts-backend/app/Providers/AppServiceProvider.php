@@ -33,7 +33,13 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('login', fn (Request $request) => Limit::perMinute(5)
             ->by(strtolower((string) $request->input('email')).'|'.$request->ip()));
-        RateLimiter::for('register', fn (Request $request) => Limit::perHour(3)->by($request->ip()));
+        RateLimiter::for('register', function (Request $request) {
+            // En local : pas de rate limit sur register (facilite les tests k6)
+            if (app()->isLocal()) {
+                return Limit::none();
+            }
+            return Limit::perHour(3)->by($request->ip());
+        });
         RateLimiter::for('refresh', fn (Request $request) => Limit::perMinute(10)->by($request->ip()));
         RateLimiter::for('vote', fn (Request $request) => Limit::perMinute(5)
             ->by((string) optional($request->user('api'))->id ?: $request->ip()));
