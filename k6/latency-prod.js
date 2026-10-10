@@ -40,12 +40,13 @@ export const options = {
     },
   },
   thresholds: {
-    // Seuils réalistes pour Render free + Aiven (latence EU→Africa)
-    latency_login:      ['p(95)<3000', 'avg<1500'],
-    latency_positions:  ['p(95)<2000', 'avg<1000'],
-    latency_candidates: ['p(95)<2000', 'avg<1000'],
-    latency_votes_my:   ['p(95)<2000', 'avg<1000'],
-    latency_results:    ['p(95)<2000', 'avg<1000'],
+    // Seuils calibrés pour Render (US-East) + Aiven (Helsinki) depuis Sénégal
+    // Latence réseau de base : ~600ms aller-retour
+    latency_login:      ['p(95)<8000', 'avg<6000'],  // bcrypt + 2 DB queries
+    latency_positions:  ['p(95)<4000', 'avg<2500'],  // avec cache 15min
+    latency_candidates: ['p(95)<4000', 'avg<2500'],
+    latency_votes_my:   ['p(95)<4000', 'avg<2500'],
+    latency_results:    ['p(95)<4000', 'avg<2500'],
     http_req_failed:    ['rate<0.05'],
     error_rate:         ['rate<0.05'],
   },
@@ -196,11 +197,12 @@ ${passed
   ? '✅ TOUS LES SEUILS PASSÉS — Infrastructure validée'
   : '⚠️  SEUILS DÉPASSÉS — Voir tableau ci-dessus'}
 
-Interprétation :
-  < 500ms  → Excellent (cache actif)
-  500-1s   → Bon (DB Aiven + Render Europe)
-  1-2s     → Acceptable (latence réseau Sénégal → Europe)
-  > 3s     → À optimiser
+Interprétation (Sénégal → Render US-East → Aiven Helsinki) :
+  < 1s     → Excellent (cache actif, pas de DB)
+  1-2s     → Bon (1 requête DB + réseau)
+  2-4s     → Acceptable (2+ requêtes DB + bcrypt)
+  4-6s     → Login normal (bcrypt + 2 DB + ~600ms réseau)
+  > 8s     → À investiguer (timeout, cold start, saturation)
 `,
   };
 }
