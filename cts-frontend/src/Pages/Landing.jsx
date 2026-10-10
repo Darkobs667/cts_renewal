@@ -432,8 +432,6 @@ export default function Landing() {
       <footer className="land-footer">
         <div className="land-footer-inner">
           <div className="land-footer-brand">
-            <img src={logocts} alt="CTS"
-              style={{ height: '1.75rem', width: '1.75rem', objectFit: 'contain' }} />
             <span>Cyber Tech Squad · UADB Bambey · 2026</span>
           </div>
           <div className="land-footer-links">
