@@ -15,7 +15,7 @@ class PositionController extends Controller
 {
     use Cacheable;  // ← utilisation du cache
     protected $positionService;
-    protected $cacheTtl = 300;  // ← (5 minutes)
+    protected $cacheTtl = 900;  // ← 15 minutes (au lieu de 5) pour réduire les cache miss
 
     public function __construct(PositionService $positionService)
     {

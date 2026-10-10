@@ -158,7 +158,7 @@ export default function () {
 
 export function handleSummary(data) {
   const m   = data.metrics;
-  const p50 = (k) => m[k] ? Math.round(m[k].values['p(50)']) + 'ms' : 'N/A';
+  const p50 = (k) => m[k] ? Math.round(m[k].values['med']) + 'ms' : 'N/A';
   const p95 = (k) => m[k] ? Math.round(m[k].values['p(95)']) + 'ms' : 'N/A';
   const avg = (k) => m[k] ? Math.round(m[k].values.avg)      + 'ms' : 'N/A';
   const min = (k) => m[k] ? Math.round(m[k].values.min)      + 'ms' : 'N/A';
