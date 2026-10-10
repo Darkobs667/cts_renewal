@@ -59,8 +59,11 @@ export default function () {
   if (res.status === 201) {
     created.add(1);
     console.log(`  ✅ Créé (${res.status})`);
-  } else if (res.status === 409) {
-    console.log(`  ℹ️  Déjà existant (409)`);
+  } else if (res.status === 409 || res.status === 422) {
+    // 409 = email déjà en base (notre logique métier)
+    // 422 = validation Laravel "email already taken" — même effet
+    created.add(1); // compte déjà existant = utilisable pour le load test
+    console.log(`  ℹ️  Déjà existant (${res.status}) — compte réutilisable`);
   } else if (res.status === 429) {
     console.log(`  ⏳ Rate limit (429) — pause 65s...`);
     sleep(65); // Attendre que la fenêtre se réinitialise
@@ -77,9 +80,11 @@ export default function () {
     console.log(`  ❌ Échec (${res.status}): ${res.body.substring(0, 150)}`);
   }
 
-  // Pause entre chaque inscription pour rester sous le rate limit
-  // rate limit = 3/heure/IP → 1 toutes les 22s = ~2.7/heure (safe)
-  if (res.status !== 429) sleep(22);
+  // Pause entre chaque inscription
+  // En local (APP_ENV=local) : pas de rate limit → pause minimale
+  // En production : 22s pour rester sous la limite 3/heure/IP
+  const isLocal = BASE_URL.includes('localhost') || BASE_URL.includes('127.0.0.1');
+  if (res.status !== 429) sleep(isLocal ? 0.5 : 22);
 }
 
 export function handleSummary(data) {
